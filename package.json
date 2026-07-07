@@ -1,0 +1,30 @@
+{
+  "name": "gence-desktop",
+  "version": "1.0.0",
+  "description": "Gence Desktop - ung dung desktop noi bo (Windows + macOS) boc erpgence (quanly.gence.vn), thong bao realtime + tu dong cap nhat.",
+  "author": {
+    "name": "Gence",
+    "email": "it@gence.vn"
+  },
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "npm run build && electron .",
+    "dev": "npm run build && electron . --dev",
+    "dist": "npm run build && electron-builder",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "publish": "npm run build && electron-builder --publish always"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "electron": "^32.2.6",
+    "electron-builder": "^25.1.8",
+    "typescript": "^5.6.3"
+  }
+}

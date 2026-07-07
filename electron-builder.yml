@@ -1,0 +1,58 @@
+appId: vn.gence.desktop
+productName: Gence Desktop
+copyright: Copyright © 2026 Gence
+
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - dist/**/*
+  - "!**/*.map"
+
+# ---------- Windows (NSIS installer + auto-update) ----------
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+  # Chua co code cert -> build unsigned (auto-update van chay, chi canh bao SmartScreen).
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Gence Desktop
+
+# ---------- macOS (dmg + zip, ky + notarize) ----------
+mac:
+  category: public.app-category.business
+  icon: build/icon.icns
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+    - target: zip
+      arch:
+        - arm64
+        - x64
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  # Notarize qua env APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID (CI secrets).
+  notarize: true
+
+dmg:
+  title: Gence Desktop
+
+# ---------- Auto-update publish (GitHub Releases) ----------
+publish:
+  provider: github
+  owner: kid182
+  repo: gence-desktop
+  releaseType: release
