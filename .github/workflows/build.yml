@@ -1,0 +1,49 @@
+name: Build & Release
+
+# Tao release + build tu dong khi push tag v* (vd v1.0.1). Hoac chay tay.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write # can de tao GitHub Release + upload asset
+
+jobs:
+  # ---------------- Windows (NSIS, unsigned - auto-update van chay) ----------------
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Build & publish (Windows)
+        run: npm run publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ---------------- macOS (dmg + zip, ky + notarize) ----------------
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Build & publish (macOS)
+        run: npm run publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Chung chi Developer ID (.p12 base64) + mat khau
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          # Notarize
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}

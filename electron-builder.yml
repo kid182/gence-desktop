@@ -1,14 +1,25 @@
 appId: vn.gence.desktop
-productName: Gence Desktop
+productName: Gence
 copyright: Copyright © 2026 Gence
 
 directories:
   output: release
   buildResources: build
 
+# Mo ta hien o thuoc tinh file .exe + trang cai dat.
+extraMetadata:
+  description: Hệ thống quản lý Gence
+
 files:
   - dist/**/*
   - "!**/*.map"
+  # Icon runtime (cua so + tray). buildResources KHONG tu copy vao app -> phai khai bao o day.
+  - build/icon.png
+  - build/trayTemplate.png
+  - build/trayTemplate@2x.png
+  - build/tray-white-16.png
+  - build/tray-white-32.png
+  - build/tray.png
 
 # ---------- Windows (NSIS installer + auto-update) ----------
 win:
@@ -16,16 +27,17 @@ win:
     - target: nsis
       arch:
         - x64
-  icon: build/icon.ico
+  icon: build/icon.ico # multi-size 16-256, dung truc tiep (khong auto-gen tu png)
   # Chua co code cert -> build unsigned (auto-update van chay, chi canh bao SmartScreen).
 
 nsis:
-  oneClick: false
-  perMachine: false
-  allowToChangeInstallationDirectory: true
-  createDesktopShortcut: true
+  oneClick: true                       # cai 1-click: double-click la xong, khong hoi trang nao
+  perMachine: false                    # cai cho user hien tai -> khong can admin, khong hoi "all users/just me"
+  createDesktopShortcut: true          # tu tao shortcut ngoai desktop
   createStartMenuShortcut: true
-  shortcutName: Gence Desktop
+  runAfterFinish: true                 # cai xong -> mo app luon
+  shortcutName: Gence                  # ten duoi icon desktop = "Gence"
+  uninstallDisplayName: Gence          # ten trong Apps & features / Go cai dat
 
 # ---------- macOS (dmg + zip, ky + notarize) ----------
 mac:

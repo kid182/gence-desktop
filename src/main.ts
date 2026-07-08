@@ -7,15 +7,27 @@ import {
   ipcMain,
   shell,
   nativeImage,
+  safeStorage,
 } from "electron";
 import * as path from "path";
 import * as fs from "fs";
 import { autoUpdater } from "electron-updater";
-import { APP_URL, ALLOWED_HOSTS, APP_NAME, WINDOW_DEFAULT, WINDOW_MIN } from "./config";
+import {
+  APP_URL,
+  ALLOWED_HOSTS,
+  APP_NAME,
+  APP_ID,
+  WINDOW_TITLE,
+  WINDOW_DEFAULT,
+  WINDOW_MIN,
+} from "./config";
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let isQuitting = false;
+
+// Khoi dong cung Windows -> chay an vao tray (khong bung cua so).
+const startHidden = process.argv.includes("--hidden");
 
 /* ----------------------------- Luu kich thuoc cua so ----------------------------- */
 type Bounds = { width: number; height: number; x?: number; y?: number };
@@ -60,7 +72,8 @@ function createWindow(): void {
     y: b.y,
     minWidth: WINDOW_MIN.width,
     minHeight: WINDOW_MIN.height,
-    title: APP_NAME,
+    title: WINDOW_TITLE,
+    show: !startHidden, // khoi dong cung may -> khong bung cua so, chi nam o tray
     backgroundColor: "#ffffff",
     icon: path.join(__dirname, "..", "build", "icon.png"),
     webPreferences: {
@@ -72,6 +85,9 @@ function createWindow(): void {
   });
 
   mainWindow.loadURL(APP_URL);
+
+  // Khoa tieu de = "ERP Gence", khong de trang web ghi de.
+  mainWindow.on("page-title-updated", (e) => e.preventDefault());
 
   // Link ngoai danh sach host -> mo browser he thong; cung host -> dieu huong trong app.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -110,19 +126,95 @@ function createWindow(): void {
   });
 }
 
+/* ----------------------------- Khoi dong cung may ----------------------------- */
+function isAutoStart(): boolean {
+  return app.getLoginItemSettings().openAtLogin;
+}
+
+function setAutoStart(enabled: boolean): void {
+  app.setLoginItemSettings({
+    openAtLogin: enabled,
+    openAsHidden: true, // macOS: mo an
+    args: ["--hidden"], // Windows: bao main chay vao tray, khong bung cua so
+  });
+}
+
+// Lan cai/chay dau tien -> bat auto-start mac dinh. Sau do ton trong lua chon cua user (tray toggle).
+function ensureDefaultAutoStart(): void {
+  const marker = path.join(app.getPath("userData"), ".autostart-set");
+  try {
+    if (fs.existsSync(marker)) return;
+    setAutoStart(true);
+    fs.writeFileSync(marker, "1");
+  } catch {
+    /* ignore */
+  }
+}
+
 /* ----------------------------- Tray ----------------------------- */
 function createTray(): void {
-  const iconPath = path.join(__dirname, "..", "build", "tray.png");
-  let image = nativeImage.createFromPath(iconPath);
-  if (image.isEmpty()) image = nativeImage.createFromPath(path.join(__dirname, "..", "build", "icon.png"));
+  const buildDir = path.join(__dirname, "..", "build");
+  let image: ReturnType<typeof nativeImage.createFromPath>;
+  if (process.platform === "darwin") {
+    // macOS: template (den + alpha) -> OS tu recolor theo theme. @2x tu bat cung thu muc.
+    image = nativeImage.createFromPath(path.join(buildDir, "trayTemplate.png"));
+    image.setTemplateImage(true);
+  } else {
+    // Windows: ban trang. 16px chuan, 32px cho man hinh HiDPI.
+    image = nativeImage.createFromPath(path.join(buildDir, "tray-white-16.png"));
+  }
+  // Fallback neu thieu file: dung tray.png roi cuoi cung icon.png resize.
+  if (image.isEmpty()) {
+    image = nativeImage.createFromPath(path.join(buildDir, "tray.png"));
+    if (image.isEmpty()) {
+      image = nativeImage
+        .createFromPath(path.join(buildDir, "icon.png"))
+        .resize({ width: 16, height: 16 });
+    }
+  }
   tray = new Tray(image);
   tray.setToolTip(APP_NAME);
   const menu = Menu.buildFromTemplate([
     { label: "Mở " + APP_NAME, click: () => showWindow() },
     { type: "separator" },
     {
+      label: "Mở công cụ nhà phát triển (DevTools)",
+      click: () => {
+        if (!mainWindow) createWindow();
+        showWindow();
+        mainWindow?.webContents.openDevTools({ mode: "detach" });
+      },
+    },
+    {
+      label: "Test thông báo",
+      click: () => {
+        if (!Notification.isSupported()) {
+          console.warn("[notify-test] Notification khong duoc OS ho tro");
+          return;
+        }
+        try {
+          const n = new Notification({
+            title: APP_NAME,
+            body: "Đây là thông báo test. Nếu bạn thấy dòng này, native notification hoạt động.",
+            silent: false,
+            icon: path.join(__dirname, "..", "build", "icon.png"),
+          });
+          n.on("click", () => showWindow());
+          n.show();
+        } catch (err) {
+          console.error("[notify-test] loi:", err);
+        }
+      },
+    },
+    {
       label: "Kiểm tra cập nhật",
       click: () => autoUpdater.checkForUpdates().catch(() => undefined),
+    },
+    {
+      label: "Khởi động cùng Windows",
+      type: "checkbox",
+      checked: isAutoStart(),
+      click: (item) => setAutoStart(item.checked),
     },
     { type: "separator" },
     {
@@ -151,22 +243,91 @@ ipcMain.on("gence:version", (e) => {
   e.returnValue = app.getVersion();
 });
 
+// Dedup: cùng 1 notification id (nhieu hook web cung goi notify) -> chi hien 1 lan.
+const recentNotifyIds = new Map<string, number>();
+const NOTIFY_DEDUP_MS = 10_000;
+
 ipcMain.on(
   "gence:notify",
   (_e, payload: { id?: string | number; title: string; body?: string; url?: string }) => {
-    if (!payload?.title || !Notification.isSupported()) return;
-    const n = new Notification({
-      title: payload.title,
-      body: payload.body || "",
-      silent: false,
-    });
-    n.on("click", () => {
-      showWindow();
-      if (payload.url) mainWindow?.webContents.send("gence:open", payload.url);
-    });
-    n.show();
+    if (!payload?.title) return;
+    if (!Notification.isSupported()) {
+      console.warn("[notify] Notification khong duoc OS ho tro");
+      return;
+    }
+
+    // Bo qua neu vua hien notification cung id trong 10s (chong double tu 2 hook).
+    if (payload.id != null) {
+      const key = String(payload.id);
+      const now = Date.now();
+      const last = recentNotifyIds.get(key);
+      if (last && now - last < NOTIFY_DEDUP_MS) return;
+      recentNotifyIds.set(key, now);
+      // Don rac cac id cu de Map khong phinh vo han.
+      for (const [k, t] of recentNotifyIds) {
+        if (now - t > NOTIFY_DEDUP_MS) recentNotifyIds.delete(k);
+      }
+    }
+    try {
+      const n = new Notification({
+        title: payload.title,
+        body: payload.body || "",
+        silent: false,
+        // Windows can icon de render toast; dung logo app (da bundle trong files).
+        icon: path.join(__dirname, "..", "build", "icon.png"),
+      });
+      n.on("click", () => {
+        showWindow();
+        if (payload.url) mainWindow?.webContents.send("gence:open", payload.url);
+      });
+      n.show();
+    } catch (err) {
+      console.error("[notify] hien notification that bai:", err);
+    }
   },
 );
+
+/* ----------------------------- Luu mat khau (safeStorage) ----------------------------- */
+// Ma hoa theo may bang DPAPI (Windows) / Keychain (macOS). File chi giai duoc tren dung may + user do.
+const credFile = () => path.join(app.getPath("userData"), "credentials.bin");
+
+ipcMain.handle(
+  "gence:cred-save",
+  (_e, cred: { username: string; password: string }): boolean => {
+    try {
+      if (!safeStorage.isEncryptionAvailable()) return false;
+      if (!cred?.username || !cred?.password) return false;
+      const enc = safeStorage.encryptString(JSON.stringify(cred));
+      fs.writeFileSync(credFile(), enc);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+);
+
+ipcMain.handle("gence:cred-load", (): { username: string; password: string } | null => {
+  try {
+    if (!safeStorage.isEncryptionAvailable()) return null;
+    const p = credFile();
+    if (!fs.existsSync(p)) return null;
+    const cred = JSON.parse(safeStorage.decryptString(fs.readFileSync(p)));
+    if (cred?.username && cred?.password) return cred;
+    return null;
+  } catch {
+    return null; // file hong / doi may -> coi nhu chua luu
+  }
+});
+
+ipcMain.handle("gence:cred-clear", (): boolean => {
+  try {
+    const p = credFile();
+    if (fs.existsSync(p)) fs.unlinkSync(p);
+    return true;
+  } catch {
+    return false;
+  }
+});
 
 ipcMain.on("gence:badge", (_e, count: number) => {
   const c = Math.max(0, Number(count) || 0);
@@ -213,6 +374,10 @@ if (!gotLock) {
   app.on("second-instance", () => showWindow());
 
   app.whenReady().then(() => {
+    // Bat buoc: Windows lay display name cua notification + gom taskbar tu ID nay.
+    // Khong set -> hien "Electron".
+    app.setAppUserModelId(APP_ID);
+    ensureDefaultAutoStart();
     createWindow();
     createTray();
     setupAutoUpdate();

@@ -1,10 +1,10 @@
 {
   "name": "gence-desktop",
   "version": "1.0.0",
-  "description": "Gence Desktop - ung dung desktop noi bo (Windows + macOS) boc erpgence (quanly.gence.vn), thong bao realtime + tu dong cap nhat.",
+  "description": "Hệ thống quản lý Gence",
   "author": {
     "name": "Gence",
-    "email": "it@gence.vn"
+    "email": "phucpm@gence.vn"
   },
   "license": "UNLICENSED",
   "private": true,

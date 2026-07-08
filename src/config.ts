@@ -12,7 +12,15 @@ export const ALLOWED_HOSTS = [
   "accounts.google.com", // dang nhap Google (neu co)
 ];
 
-export const APP_NAME = "Gence Desktop";
+/** Ten hien thi: taskbar, tray tooltip, tieu de notification. */
+export const APP_NAME = "Gence";
+
+/** Tieu de thanh cua so (khoa cung, khong de web ghi de). */
+export const WINDOW_TITLE = "ERP Gence";
+
+/** AppUserModelID - phai khop appId trong electron-builder.yml.
+ *  Set ID nay moi het hien "Electron" o taskbar + notification tren Windows. */
+export const APP_ID = "vn.gence.desktop";
 
 /** Kich thuoc cua so mac dinh + toi thieu. */
 export const WINDOW_DEFAULT = { width: 1440, height: 900 };
