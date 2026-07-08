@@ -74,8 +74,16 @@ function createWindow(): void {
     minHeight: WINDOW_MIN.height,
     title: WINDOW_TITLE,
     show: !startHidden, // khoi dong cung may -> khong bung cua so, chi nam o tray
-    backgroundColor: "#ffffff",
+    backgroundColor: "#183756", // dong bo mau sidebar (het flash trang luc load)
     icon: path.join(__dirname, "..", "build", "icon.png"),
+    // Bo title bar mac dinh + menu (File/Edit/View...) -> title bar tuy chinh mau #183756,
+    // nut min/max/close mau trang. Web fill sat len top.
+    titleBarStyle: "hidden",
+    titleBarOverlay: {
+      color: "#183756",
+      symbolColor: "#ffffff",
+      height: 34,
+    },
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -175,6 +183,8 @@ function createTray(): void {
   tray = new Tray(image);
   tray.setToolTip(APP_NAME);
   const menu = Menu.buildFromTemplate([
+    { label: `Phiên bản ${app.getVersion()}`, enabled: false },
+    { type: "separator" },
     { label: "Mở " + APP_NAME, click: () => showWindow() },
     { type: "separator" },
     {
@@ -377,6 +387,8 @@ if (!gotLock) {
     // Bat buoc: Windows lay display name cua notification + gom taskbar tu ID nay.
     // Khong set -> hien "Electron".
     app.setAppUserModelId(APP_ID);
+    // Bo menu mac dinh (File/Edit/View/Window/Help).
+    Menu.setApplicationMenu(null);
     ensureDefaultAutoStart();
     createWindow();
     createTray();
