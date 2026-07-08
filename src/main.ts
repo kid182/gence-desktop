@@ -80,8 +80,8 @@ function createWindow(): void {
     // nut min/max/close mau trang. Web fill sat len top.
     titleBarStyle: "hidden",
     titleBarOverlay: {
-      color: "#183756",
-      symbolColor: "#ffffff",
+      color: "#ffffff", // trang, dong bo nen noi dung
+      symbolColor: "#183756", // ky hieu nut dam tren nen trang
       height: 34,
     },
     webPreferences: {

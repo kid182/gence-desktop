@@ -44,9 +44,9 @@ contextBridge.exposeInMainWorld("genceDesktop", bridge);
 
 /**
  * Title bar tuy chinh (titleBarStyle: hidden) -> web fill sat len top nhung mat vung keo cua so.
- * Chen 1 dai #183756 o mep tren phan noi dung (ben PHAI sidebar 256px) de:
+ * Chen 1 dai trang o mep tren phan noi dung (ben PHAI sidebar 256px) de:
  *  - keo/di chuyen cua so (-webkit-app-region: drag)
- *  - top dong nhat mau #183756 (sidebar trai da la #183756, nut dieu khien phai cung #183756)
+ *  - top dong nhat nen noi dung mau trang (sidebar trai giu mau rieng cua erpgence)
  * Bat dau tu 256px (be rong sidebar mo - ml-64) nen KHONG che avatar/nut thu gon o sidebar.
  * Nut min/max/close la overlay cua Electron, luon noi len tren dai nay -> van bam duoc.
  */
@@ -60,7 +60,7 @@ window.addEventListener("DOMContentLoaded", () => {
     "left:256px",
     "right:0",
     "height:34px",
-    "background:#183756",
+    "background:#ffffff",
     "z-index:2147483647",
     "-webkit-app-region:drag",
   ].join(";");
