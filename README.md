@@ -53,3 +53,9 @@ Windows sau qua `WIN_CSC_LINK` / `WIN_CSC_KEY_PASSWORD` nếu cần.
 ## Thông báo (bridge)
 erpgence gọi `window.genceDesktop.notify({ title, body, url })` khi có notification Reverb mới,
 và `setBadge(unreadCount)`. Xem `hooks/use-user-notifications.ts` trong erpgence.
+
+
+cd C:\Users\Admin\gence-desktop
+npm version patch          # 1.0.0 -> 1.0.1, tự commit + tạo tag v1.0.1
+git push
+git push --tags            # <-- kích hoạt CI
