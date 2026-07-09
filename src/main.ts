@@ -1,6 +1,7 @@
 import {
   app,
   BrowserWindow,
+  WebContentsView,
   Tray,
   Menu,
   Notification,
@@ -23,8 +24,27 @@ import {
 } from "./config";
 
 let mainWindow: BrowserWindow | null = null;
+let mainView: WebContentsView | null = null; // webview erpgence (nam duoi title bar)
 let tray: Tray | null = null;
 let isQuitting = false;
+
+const TITLEBAR_HEIGHT = 34;
+
+// Title bar chay dai toan ngang: trai "ERP Gence", phai la nut min/max/close (titleBarOverlay).
+// Load vao BrowserWindow; erpgence nam trong WebContentsView ben duoi -> nhu tab trinh duyet,
+// khong bao gio de len noi dung.
+const TITLEBAR_HTML =
+  "data:text/html;charset=utf-8," +
+  encodeURIComponent(
+    `<!doctype html><meta charset="utf-8"><style>` +
+      `html,body{margin:0;height:100vh;overflow:hidden;background:#183756;` +
+      `font-family:'Segoe UI',system-ui,-apple-system,sans-serif}` +
+      `.bar{height:${TITLEBAR_HEIGHT}px;display:flex;align-items:center;gap:8px;padding:0 12px;` +
+      `-webkit-app-region:drag;color:#fff;font-size:12.5px;font-weight:600;letter-spacing:.3px;user-select:none}` +
+      `.dot{width:8px;height:8px;border-radius:50%;background:#eab308;flex:0 0 auto}` +
+      `.ac{color:#eab308}` +
+      `</style><div class="bar"><span class="dot"></span><span><span class="ac">ERP</span> Gence</span></div>`,
+  );
 
 // Khoi dong cung Windows -> chay an vao tray (khong bung cua so).
 const startHidden = process.argv.includes("--hidden");
@@ -63,6 +83,18 @@ function hostOf(url: string): string {
 }
 const isAllowed = (url: string) => ALLOWED_HOSTS.includes(hostOf(url));
 
+// Dinh vi lai webview erpgence ben duoi title bar khi cua so doi kich thuoc.
+function layoutView(): void {
+  if (!mainWindow || !mainView || mainWindow.isDestroyed()) return;
+  const { width, height } = mainWindow.getContentBounds();
+  mainView.setBounds({
+    x: 0,
+    y: TITLEBAR_HEIGHT,
+    width,
+    height: Math.max(0, height - TITLEBAR_HEIGHT),
+  });
+}
+
 function createWindow(): void {
   const b = loadBounds();
   mainWindow = new BrowserWindow({
@@ -74,16 +106,26 @@ function createWindow(): void {
     minHeight: WINDOW_MIN.height,
     title: WINDOW_TITLE,
     show: !startHidden, // khoi dong cung may -> khong bung cua so, chi nam o tray
-    backgroundColor: "#183756", // dong bo mau sidebar (het flash trang luc load)
+    backgroundColor: "#183756",
     icon: path.join(__dirname, "..", "build", "icon.png"),
-    // Bo title bar mac dinh + menu (File/Edit/View...) -> title bar tuy chinh mau #183756,
-    // nut min/max/close mau trang. Web fill sat len top.
+    // Title bar tuy chinh chay dai: bo title bar OS + menu; nut min/max/close la overlay ben phai.
     titleBarStyle: "hidden",
     titleBarOverlay: {
-      color: "#ffffff", // trang, dong bo nen noi dung
-      symbolColor: "#183756", // ky hieu nut dam tren nen trang
-      height: 34,
+      color: "#183756", // khop mau title bar HTML
+      symbolColor: "#ffffff", // nut trang tren nen #183756
+      height: TITLEBAR_HEIGHT,
     },
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  // BrowserWindow = thanh title bar (chay dai). erpgence load trong WebContentsView ben duoi.
+  mainWindow.loadURL(TITLEBAR_HTML);
+  mainWindow.on("page-title-updated", (e) => e.preventDefault());
+
+  mainView = new WebContentsView({
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -91,32 +133,35 @@ function createWindow(): void {
       spellcheck: true,
     },
   });
-
-  mainWindow.loadURL(APP_URL);
-
-  // Khoa tieu de = "ERP Gence", khong de trang web ghi de.
-  mainWindow.on("page-title-updated", (e) => e.preventDefault());
+  mainWindow.contentView.addChildView(mainView);
+  mainView.webContents.loadURL(APP_URL);
+  layoutView();
 
   // Link ngoai danh sach host -> mo browser he thong; cung host -> dieu huong trong app.
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+  mainView.webContents.setWindowOpenHandler(({ url }) => {
     if (isAllowed(url)) return { action: "allow" };
     shell.openExternal(url);
     return { action: "deny" };
   });
-  mainWindow.webContents.on("will-navigate", (e, url) => {
+  mainView.webContents.on("will-navigate", (e, url) => {
     if (!isAllowed(url)) {
       e.preventDefault();
       shell.openExternal(url);
     }
   });
 
-  // Luu kich thuoc khi resize/move (debounce nhe qua timeout).
+  // Resize/maximize -> dinh vi lai webview + luu kich thuoc (debounce).
   let saveTimer: NodeJS.Timeout | null = null;
   const scheduleSave = () => {
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(saveBounds, 400);
   };
-  mainWindow.on("resize", scheduleSave);
+  mainWindow.on("resize", () => {
+    layoutView();
+    scheduleSave();
+  });
+  mainWindow.on("maximize", layoutView);
+  mainWindow.on("unmaximize", layoutView);
   mainWindow.on("move", scheduleSave);
 
   // Dong cua so = thu nho xuong tray (khong thoat) tru khi thuc su quit.
@@ -131,6 +176,7 @@ function createWindow(): void {
 
   mainWindow.on("closed", () => {
     mainWindow = null;
+    mainView = null;
   });
 }
 
@@ -192,7 +238,7 @@ function createTray(): void {
       click: () => {
         if (!mainWindow) createWindow();
         showWindow();
-        mainWindow?.webContents.openDevTools({ mode: "detach" });
+        mainView?.webContents.openDevTools({ mode: "detach" });
       },
     },
     {
@@ -288,7 +334,7 @@ ipcMain.on(
       });
       n.on("click", () => {
         showWindow();
-        if (payload.url) mainWindow?.webContents.send("gence:open", payload.url);
+        if (payload.url) mainView?.webContents.send("gence:open", payload.url);
       });
       n.show();
     } catch (err) {
