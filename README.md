@@ -55,7 +55,7 @@ erpgence gọi `window.genceDesktop.notify({ title, body, url })` khi có notifi
 và `setBadge(unreadCount)`. Xem `hooks/use-user-notifications.ts` trong erpgence.
 
 
-cd C:\Users\Admin\gence-desktop
+cd C:\Users\Admin\Gence Projects\tools\gence-desktop
 npm version patch          # 1.0.0 -> 1.0.1, tự commit + tạo tag v1.0.1
 git push
 git push --tags            # <-- kích hoạt CI
