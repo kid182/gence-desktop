@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'">
+<title>Tệp tải xuống</title>
+<style>
+  :root { --bg: #1d4061; --line: rgba(255, 255, 255, .1); --fg: #fff; --dim: rgba(255, 255, 255, .66); --ac: #eab308; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size: 13px; user-select: none; overflow: hidden; }
+  [hidden] { display: none !important; }
+
+  /* The lap kin view va dinh lien day thanh tren cung: view khong trong suot duoc nen khong
+     bo goc, khong do bong (se lo nen view quanh the). */
+  .card { background: var(--bg); border: 1px solid rgba(255, 255, 255, .16); border-top: 0; overflow: hidden; }
+
+  .head { display: flex; align-items: center; gap: 4px; height: 42px; padding: 0 8px 0 14px; border-bottom: 1px solid var(--line); }
+  .head h1 { flex: 1 1 auto; margin: 0; font-size: 13px; font-weight: 600; letter-spacing: .2px; }
+
+  button { border: 0; background: transparent; color: var(--fg); font: inherit; cursor: default; }
+  button:focus-visible { outline: 1.5px solid var(--ac); outline-offset: -1.5px; }
+  .txt { height: 28px; padding: 0 9px; border-radius: 5px; font-size: 12px; color: var(--dim); }
+  .txt:hover { background: rgba(255, 255, 255, .12); color: var(--fg); }
+  .txt:disabled { opacity: .4; background: transparent; color: var(--dim); }
+  svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  .list { max-height: 336px; overflow-y: auto; }
+  .list::-webkit-scrollbar { width: 8px; }
+  .list::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .22); border-radius: 4px; }
+
+  .row { display: flex; align-items: center; gap: 4px; min-height: 56px; padding: 6px 8px 6px 14px; box-sizing: border-box; }
+  .row + .row { border-top: 1px solid var(--line); }
+  .row:hover { background: rgba(255, 255, 255, .05); }
+  .ic { flex: 0 0 auto; margin-right: 8px; color: var(--dim); display: grid; }
+  .ic svg { width: 20px; height: 20px; }
+  .tx { flex: 1 1 auto; min-width: 0; }
+  .name { display: block; max-width: 100%; padding: 0; text-align: left; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-radius: 3px; }
+  .name:not(:disabled):hover { text-decoration: underline; text-decoration-color: var(--ac); text-underline-offset: 3px; }
+  .name:disabled { color: var(--dim); font-weight: 500; }
+  .sub { margin-top: 2px; font-size: 11.5px; color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sub.bad { color: #fca5a5; }
+  .pb { height: 3px; margin-top: 5px; border-radius: 2px; background: rgba(255, 255, 255, .16); overflow: hidden; }
+  .pb i { display: block; height: 100%; width: 0; background: var(--ac); transition: width .2s linear; }
+  .act { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 5px; display: grid; place-items: center; color: var(--dim); }
+  .act:hover { background: rgba(255, 255, 255, .14); color: var(--fg); }
+
+  .empty { padding: 26px 20px 28px; text-align: center; color: var(--dim); font-size: 12.5px; line-height: 1.5; }
+  @media (prefers-reduced-motion: reduce) { .pb i { transition: none; } }
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="head">
+    <h1>Tệp tải xuống</h1>
+    <button class="txt" id="folder" title="Mở thư mục Downloads của máy">Mở thư mục</button>
+    <button class="txt" id="clear" title="Chỉ xoá khỏi danh sách này, không xoá tệp trên máy">Xoá danh sách</button>
+  </div>
+  <div class="list" id="list"></div>
+  <div class="empty" id="empty">Chưa có tệp nào tải về trong app.<br>Tệp tải xong nằm ở thư mục Downloads của máy.</div>
+</div>
+
+<template id="rowTpl">
+  <div class="row">
+    <div class="ic"><svg viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg></div>
+    <div class="tx">
+      <button class="name"></button>
+      <div class="sub"></div>
+      <div class="pb"><i></i></div>
+    </div>
+    <button class="act show" title="Hiện trong thư mục" aria-label="Hiện trong thư mục">
+      <svg viewBox="0 0 24 24"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg>
+    </button>
+    <button class="act x">
+      <svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+  </div>
+</template>
+<script src="downloads.js"></script>
+</body>
+</html>

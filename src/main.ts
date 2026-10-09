@@ -21,30 +21,21 @@ import {
   WINDOW_TITLE,
   WINDOW_DEFAULT,
   WINDOW_MIN,
+  TITLEBAR_HEIGHT,
 } from "./config";
+import {
+  TITLEBAR_FILE,
+  TOOLBAR_PRELOAD,
+  initToolbar,
+  attachToolbar,
+  detachToolbar,
+  layoutPanel,
+} from "./toolbar";
 
 let mainWindow: BrowserWindow | null = null;
 let mainView: WebContentsView | null = null; // webview erpgence (nam duoi title bar)
 let tray: Tray | null = null;
 let isQuitting = false;
-
-const TITLEBAR_HEIGHT = 34;
-
-// Title bar chay dai toan ngang: trai "ERP Gence", phai la nut min/max/close (titleBarOverlay).
-// Load vao BrowserWindow; erpgence nam trong WebContentsView ben duoi -> nhu tab trinh duyet,
-// khong bao gio de len noi dung.
-const TITLEBAR_HTML =
-  "data:text/html;charset=utf-8," +
-  encodeURIComponent(
-    `<!doctype html><meta charset="utf-8"><style>` +
-      `html,body{margin:0;height:100vh;overflow:hidden;background:#183756;` +
-      `font-family:'Segoe UI',system-ui,-apple-system,sans-serif}` +
-      `.bar{height:${TITLEBAR_HEIGHT}px;display:flex;align-items:center;gap:8px;padding:0 12px;` +
-      `-webkit-app-region:drag;color:#fff;font-size:12.5px;font-weight:600;letter-spacing:.3px;user-select:none}` +
-      `.dot{width:8px;height:8px;border-radius:50%;background:#eab308;flex:0 0 auto}` +
-      `.ac{color:#eab308}` +
-      `</style><div class="bar"><span class="dot"></span><span><span class="ac">ERP</span> Gence</span></div>`,
-  );
 
 // Khoi dong cung Windows -> chay an vao tray (khong bung cua so).
 const startHidden = process.argv.includes("--hidden");
@@ -93,6 +84,7 @@ function layoutView(): void {
     width,
     height: Math.max(0, height - TITLEBAR_HEIGHT),
   });
+  layoutPanel();
 }
 
 function createWindow(): void {
@@ -116,13 +108,16 @@ function createWindow(): void {
       height: TITLEBAR_HEIGHT,
     },
     webPreferences: {
+      preload: TOOLBAR_PRELOAD, // cau noi rieng cua thanh tren cung (khong phai cua erpgence)
       contextIsolation: true,
       nodeIntegration: false,
     },
   });
 
-  // BrowserWindow = thanh title bar (chay dai). erpgence load trong WebContentsView ben duoi.
-  mainWindow.loadURL(TITLEBAR_HTML);
+  // BrowserWindow = thanh tren cung (ui/titlebar.html): ten app + nut dieu huong + tien ich,
+  // ben phai la nut min/max/close (titleBarOverlay). erpgence load trong WebContentsView ben duoi
+  // -> nhu tab trinh duyet, khong bao gio de len noi dung.
+  mainWindow.loadFile(TITLEBAR_FILE);
   mainWindow.on("page-title-updated", (e) => e.preventDefault());
 
   mainView = new WebContentsView({
@@ -135,6 +130,7 @@ function createWindow(): void {
   });
   mainWindow.contentView.addChildView(mainView);
   mainView.webContents.loadURL(APP_URL);
+  attachToolbar(mainWindow, mainView);
   layoutView();
 
   // Link ngoai danh sach host -> mo browser he thong; cung host -> dieu huong trong app.
@@ -177,6 +173,7 @@ function createWindow(): void {
   mainWindow.on("closed", () => {
     mainWindow = null;
     mainView = null;
+    detachToolbar();
   });
 }
 
@@ -436,6 +433,7 @@ if (!gotLock) {
     // Bo menu mac dinh (File/Edit/View/Window/Help).
     Menu.setApplicationMenu(null);
     ensureDefaultAutoStart();
+    initToolbar();
     createWindow();
     createTray();
     setupAutoUpdate();

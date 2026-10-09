@@ -25,3 +25,6 @@ export const APP_ID = "vn.gence.desktop";
 /** Kich thuoc cua so mac dinh + toi thieu. */
 export const WINDOW_DEFAULT = { width: 1440, height: 900 };
 export const WINDOW_MIN = { width: 1024, height: 680 };
+
+/** Chieu cao thanh tren cung (px). Phai khop --h trong ui/titlebar.html. */
+export const TITLEBAR_HEIGHT = 34;

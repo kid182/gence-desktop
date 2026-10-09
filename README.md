@@ -5,11 +5,36 @@ gọi backend **servergence**, nhận **thông báo realtime** (Laravel Reverb) 
 Notification hệ điều hành, và **tự động cập nhật** qua GitHub Releases.
 
 ## Kiến trúc
-- Electron "mỏng": `BrowserWindow.loadURL("https://quanly.gence.vn")` - web tự cập nhật khi deploy,
+- Electron "mỏng": webview trỏ thẳng `https://quanly.gence.vn` - web tự cập nhật khi deploy,
   lớp vỏ Electron chỉ cần update khi đổi bản (auto-update).
 - `preload.ts` expose `window.genceDesktop` (contextBridge, an toàn). erpgence phát hiện bridge
   này để đẩy notification realtime sang **native Notification + badge + tray**.
 - Auto-update: `electron-updater` <- GitHub Releases (build bằng GitHub Actions).
+
+## Thanh trên cùng
+Cửa sổ gồm hai lớp: `BrowserWindow` vẽ thanh trên cùng (`ui/titlebar.html`), erpgence nằm trong
+`WebContentsView` bên dưới. Logic ở `src/toolbar.ts`, tải xuống ở `src/downloads.ts`.
+
+| Nút | Việc | Phím tắt |
+|-----|------|----------|
+| Lùi / Tới | Lịch sử điều hướng của trang | `Alt + ←` / `Alt + →` |
+| Tải lại | Đang nạp thì thành nút Dừng. Giữ `Shift` khi bấm = bỏ bộ nhớ đệm | `F5`, `Ctrl + R`, `Ctrl + Shift + R` |
+| Trang chủ | Về `APP_URL` | |
+| Tìm | Ô tìm trong trang ngay trên thanh, có đếm kết quả | `Ctrl + F` |
+| Tệp tải xuống | Bảng danh sách: mở tệp, hiện trong thư mục, huỷ, xoá khỏi danh sách | `Ctrl + J` |
+| `...` | In trang, thu phóng, sao chép liên kết, mở bằng trình duyệt, DevTools | `Ctrl + P`, `Ctrl + +/-/0`, `F12` |
+
+- Tệp tải về **lưu thẳng vào thư mục Downloads của máy** (trùng tên thì thêm ` (1)`), bảng tự bật
+  lên. Muốn chọn nơi lưu từng lần: menu `...` > "Hỏi nơi lưu mỗi lần tải".
+- Lịch sử tải (50 dòng gần nhất), hệ số thu phóng và lựa chọn trên lưu ở `userData`
+  (`downloads.json`, `settings.json`) - theo từng máy.
+- Hai trang trong `ui/` dùng cầu nối riêng `window.genceBar` (`src/toolbar-preload.ts`). erpgence
+  **không** thấy cầu nối này, main cũng chỉ nhận lệnh `bar:do` từ hai trang nội bộ đó.
+- Thêm nút mới: thêm `<button>` vào `ui/titlebar.html`, gọi `bar.do("<lệnh>")` trong
+  `ui/titlebar.js`, xử lý ở `onAction` trong `src/toolbar.ts`.
+
+⚠ Chạy thử từ terminal của VSCode phải bỏ biến `ELECTRON_RUN_AS_NODE` (VSCode đặt sẵn = 1, Electron
+sẽ chạy như Node thuần và không mở cửa sổ): `env -u ELECTRON_RUN_AS_NODE npm start`.
 
 ## Chạy dev
 ```bash

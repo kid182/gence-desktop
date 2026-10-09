@@ -12,6 +12,8 @@ extraMetadata:
 
 files:
   - dist/**/*
+  # Giao dien thanh tren cung (title bar + bang tep tai xuong) - file tinh, main loadFile truc tiep.
+  - ui/**/*
   - "!**/*.map"
   # Icon runtime (cua so + tray). buildResources KHONG tu copy vao app -> phai khai bao o day.
   - build/icon.png
