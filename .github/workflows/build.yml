@@ -28,7 +28,10 @@ jobs:
 
   # ---------------- macOS (dmg + zip, ky + notarize) ----------------
   macos:
-    runs-on: macos-latest
+    # Ghim macos-15: macos-latest da len macOS 26.6, buoc nhap chung chi ky cua electron-builder
+    # (security set-key-partition-list) hong voi "SecKeychainUnlock: passphrase is not correct"
+    # du mat khau dung - ban v1.0.7 mat ban Mac vi vay. Thu lai macos-latest khi Apple sua.
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
