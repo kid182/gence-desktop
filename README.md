@@ -63,10 +63,15 @@ App đóng cửa sổ là xuống khay chứ không thoát, nên không trông v
   lại, vẫn ẩn.
 - Cửa sổ **đang mở** -> hiện nút vàng "Cập nhật" trên thanh trên cùng + mục ở menu khay; bấm là
   khởi động lại và cài. Không bấm thì app tự cài sau khi người dùng đóng cửa sổ xuống khay.
+- Cửa sổ mở nhưng cả máy không ai đụng chuột / bàn phím 15 phút -> tự cài rồi mở lại.
+- ERP cũng ép: `components/layout/desktop-update-gate.tsx` bên erpgence hỏi bản mới nhất qua
+  `/api/desktop-version`, gọi `genceDesktop.checkUpdate()` để app tải ngay, tải xong thì hiện bảng
+  "Cập nhật ngay" (gọi `genceDesktop.installUpdate()`). Được hoãn 3 lần, mỗi lần 15 phút.
 - Nhật ký từng máy: `%APPDATA%\gence-desktop\updater.log` - tra khi một máy mãi không lên bản.
 
-⚠ Máy còn ở bản **1.0.8 trở xuống** chưa có cơ chế này: phải một lần chuột phải biểu tượng Gence
-ở khay > **Thoát** rồi mở lại (bản đã tải sẽ cài lúc thoát), hoặc cài lại từ file trên Releases.
+⚠ Máy còn ở bản **1.0.8 trở xuống** chưa có cơ chế này, và web KHÔNG có lệnh nào bắt các bản đó
+thoát hay cài (cầu nối cũ chỉ có thông báo, badge, lưu mật khẩu). ERP hiện bảng hướng dẫn: chuột
+phải biểu tượng Gence ở khay > **Thoát** rồi mở lại (bản đã tải sẽ cài lúc thoát), hoặc tải bộ cài.
 
 ### Secrets cần cấu hình trong repo (Settings > Secrets and variables > Actions)
 | Secret | Dùng cho |
