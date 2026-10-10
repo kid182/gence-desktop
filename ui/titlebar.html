@@ -43,6 +43,11 @@
   #reload.loading .i-stop { display: block; }
 
   .zoom { width: auto; padding: 0 8px; font-size: 11.5px; font-weight: 600; color: var(--ac); }
+  /* Nut chi hien khi ban moi da tai xong: bam la khoi dong lai va cap nhat. */
+  .upd { width: auto; height: 22px; padding: 0 9px 0 7px; margin-right: 4px; gap: 5px; grid-auto-flow: column; background: var(--ac); color: #183756; font-size: 11.5px; font-weight: 700; }
+  .upd:hover { background: #facc15; }
+  .upd:active { background: #ca8a04; }
+  .upd svg { width: 13px; height: 13px; stroke-width: 2.4; }
   .toast { margin-right: 6px; font-size: 11.5px; color: rgba(255, 255, 255, .85); white-space: nowrap; }
 
   .find {
@@ -112,6 +117,10 @@
   <span class="toast" id="toast" role="status" hidden></span>
   <button class="zoom" id="zoom" title="Đang thu phóng - bấm để về 100%" hidden></button>
 
+  <button class="upd" id="update" hidden>
+    <svg viewBox="0 0 24 24"><path d="M12 17V3"/><path d="m6 11 6 6 6-6"/><path d="M19 21H5"/></svg>
+    <span>Cập nhật</span>
+  </button>
   <button id="findBtn" title="Tìm trong trang (Ctrl + F)" aria-label="Tìm trong trang">
     <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
   </button>

@@ -54,6 +54,20 @@ npm run dist:mac     # chỉ macOS (cần chạy trên máy Mac)
 Push tag `v*` (vd `git tag v1.0.1 && git push origin v1.0.1`) -> CI build Windows + macOS ->
 publish lên **GitHub Releases** -> app tự tải & cập nhật.
 
+### Bản mới được cài lúc nào (`src/updater.ts`)
+App đóng cửa sổ là xuống khay chứ không thoát, nên không trông vào "cài khi thoát" được - đến
+1.0.8 bản mới tải về xong vẫn nằm chờ, nhân viên dùng bản cũ cả tháng. Từ 1.0.9:
+
+- App kiểm tra lúc mở và mỗi giờ; có bản mới thì tự tải.
+- Cửa sổ **đang ẩn** (ở khay, hoặc vừa khởi động cùng máy) liên tục 5 phút -> tự cài im lặng rồi mở
+  lại, vẫn ẩn.
+- Cửa sổ **đang mở** -> hiện nút vàng "Cập nhật" trên thanh trên cùng + mục ở menu khay; bấm là
+  khởi động lại và cài. Không bấm thì app tự cài sau khi người dùng đóng cửa sổ xuống khay.
+- Nhật ký từng máy: `%APPDATA%\gence-desktop\updater.log` - tra khi một máy mãi không lên bản.
+
+⚠ Máy còn ở bản **1.0.8 trở xuống** chưa có cơ chế này: phải một lần chuột phải biểu tượng Gence
+ở khay > **Thoát** rồi mở lại (bản đã tải sẽ cài lúc thoát), hoặc cài lại từ file trên Releases.
+
 ### Secrets cần cấu hình trong repo (Settings > Secrets and variables > Actions)
 | Secret | Dùng cho |
 |--------|----------|

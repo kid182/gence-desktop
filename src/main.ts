@@ -12,7 +12,6 @@ import {
 } from "electron";
 import * as path from "path";
 import * as fs from "fs";
-import { autoUpdater } from "electron-updater";
 import {
   APP_URL,
   ALLOWED_HOSTS,
@@ -30,15 +29,24 @@ import {
   attachToolbar,
   detachToolbar,
   layoutPanel,
+  refreshToolbar,
 } from "./toolbar";
+import {
+  setupAutoUpdate,
+  watchWindow,
+  checkNow,
+  installUpdate,
+  pendingVersion,
+  consumeRelaunchHidden,
+} from "./updater";
 
 let mainWindow: BrowserWindow | null = null;
 let mainView: WebContentsView | null = null; // webview erpgence (nam duoi title bar)
 let tray: Tray | null = null;
 let isQuitting = false;
 
-// Khoi dong cung Windows -> chay an vao tray (khong bung cua so).
-const startHidden = process.argv.includes("--hidden");
+// Khoi dong cung Windows, hoac vua tu cap nhat luc dang an -> chay an vao tray (khong bung cua so).
+const startHidden = process.argv.includes("--hidden") || consumeRelaunchHidden();
 
 /* ----------------------------- Luu kich thuoc cua so ----------------------------- */
 type Bounds = { width: number; height: number; x?: number; y?: number };
@@ -131,6 +139,7 @@ function createWindow(): void {
   mainWindow.contentView.addChildView(mainView);
   mainView.webContents.loadURL(APP_URL);
   attachToolbar(mainWindow, mainView);
+  watchWindow(mainWindow);
   layoutView();
 
   // Link ngoai danh sach host -> mo browser he thong; cung host -> dieu huong trong app.
@@ -225,8 +234,20 @@ function createTray(): void {
   }
   tray = new Tray(image);
   tray.setToolTip(APP_NAME);
+  refreshTrayMenu();
+  tray.on("click", () => showWindow());
+}
+
+// Dung lai menu khay moi khi trang thai doi (vd vua tai xong ban cap nhat).
+function refreshTrayMenu(): void {
+  if (!tray) return;
+  const ready = pendingVersion();
+  const updateItems: Electron.MenuItemConstructorOptions[] = ready
+    ? [{ label: `Cập nhật lên ${ready} và khởi động lại`, click: () => installUpdate(true) }]
+    : [];
   const menu = Menu.buildFromTemplate([
     { label: `Phiên bản ${app.getVersion()}`, enabled: false },
+    ...updateItems,
     { type: "separator" },
     { label: "Mở " + APP_NAME, click: () => showWindow() },
     { type: "separator" },
@@ -261,7 +282,7 @@ function createTray(): void {
     },
     {
       label: "Kiểm tra cập nhật",
-      click: () => autoUpdater.checkForUpdates().catch(() => undefined),
+      click: () => void checkNow(true),
     },
     {
       label: "Khởi động cùng Windows",
@@ -279,7 +300,6 @@ function createTray(): void {
     },
   ]);
   tray.setContextMenu(menu);
-  tray.on("click", () => showWindow());
 }
 
 function showWindow(): void {
@@ -390,35 +410,6 @@ ipcMain.on("gence:badge", (_e, count: number) => {
   }
 });
 
-/* ----------------------------- Auto-update ----------------------------- */
-function setupAutoUpdate(): void {
-  autoUpdater.autoDownload = true;
-  autoUpdater.autoInstallOnAppQuit = true;
-
-  autoUpdater.on("update-downloaded", () => {
-    if (!Notification.isSupported()) return;
-    const n = new Notification({
-      title: APP_NAME,
-      body: "Đã tải bản cập nhật mới. Khởi động lại để áp dụng.",
-    });
-    n.on("click", () => {
-      isQuitting = true;
-      autoUpdater.quitAndInstall();
-    });
-    n.show();
-  });
-
-  autoUpdater.on("error", (err) => {
-    console.error("[updater]", err?.message || err);
-  });
-
-  // Check khi mo + moi 6 tieng.
-  autoUpdater.checkForUpdatesAndNotify().catch(() => undefined);
-  setInterval(() => {
-    autoUpdater.checkForUpdatesAndNotify().catch(() => undefined);
-  }, 6 * 60 * 60 * 1000);
-}
-
 /* ----------------------------- Lifecycle ----------------------------- */
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
@@ -436,7 +427,17 @@ if (!gotLock) {
     initToolbar();
     createWindow();
     createTray();
-    setupAutoUpdate();
+    setupAutoUpdate({
+      getWindow: () => mainWindow,
+      beforeQuit: () => {
+        isQuitting = true;
+        saveBounds();
+      },
+      onPending: () => {
+        refreshTrayMenu();
+        refreshToolbar();
+      },
+    });
 
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();

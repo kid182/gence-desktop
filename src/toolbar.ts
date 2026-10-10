@@ -11,6 +11,7 @@ import * as path from "path";
 import { APP_URL, TITLEBAR_HEIGHT } from "./config";
 import { getSettings, setSetting } from "./settings";
 import { initDownloads, listDownloads, downloadAction, DownloadEntry } from "./downloads";
+import { pendingVersion, installUpdate } from "./updater";
 
 /**
  * Thanh tren cung: dieu huong (lui / toi / tai lai / trang chu), tim trong trang, tep tai xuong,
@@ -49,8 +50,12 @@ function pushState(): void {
     loading: wc.isLoading(),
     zoom: Math.round(getSettings().zoom * 100),
     panelOpen,
+    update: pendingVersion(), // ban moi da tai xong, cho cai -> hien nut "Cap nhat"
   });
 }
+
+/** Day lai trang thai xuong thanh tren cung (vd vua co ban cap nhat). */
+export const refreshToolbar = pushState;
 
 function pushDownloads(list: DownloadEntry[] = listDownloads()): void {
   sendBar("bar:downloads", list);
@@ -233,6 +238,9 @@ function onAction(sender: WebContents, action: string, arg: unknown): void {
       break;
     case "zoom-reset":
       setZoom(1);
+      break;
+    case "update-install":
+      installUpdate(true);
       break;
     case "menu":
       popupMenu(arg as { x?: number; y?: number });

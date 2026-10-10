@@ -17,6 +17,7 @@ $("home").onclick = () => bar.do("home");
 // Giu Shift / Ctrl khi bam = tai lai bo bo nho dem.
 reloadBtn.onclick = (e) => bar.do(loading ? "stop" : "reload", e.shiftKey || e.ctrlKey);
 $("zoom").onclick = () => bar.do("zoom-reset");
+$("update").onclick = () => bar.do("update-install");
 $("dl").onclick = () => bar.do("downloads-toggle");
 $("more").onclick = () => {
   const r = $("more").getBoundingClientRect();
@@ -35,6 +36,9 @@ bar.on("bar:state", (s) => {
 
   $("zoom").hidden = s.zoom === 100;
   $("zoom").textContent = s.zoom + "%";
+
+  $("update").hidden = !s.update;
+  if (s.update) $("update").title = `Đã tải bản ${s.update} - bấm để khởi động lại và cập nhật`;
 
   panelOpen = !!s.panelOpen;
   $("dl").classList.toggle("on", panelOpen);
