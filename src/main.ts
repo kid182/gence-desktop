@@ -37,6 +37,7 @@ import {
   checkNow,
   installUpdate,
   pendingVersion,
+  updateState,
   consumeRelaunchHidden,
 } from "./updater";
 
@@ -402,6 +403,14 @@ ipcMain.handle("gence:cred-clear", (): boolean => {
   }
 });
 
+// ERP hoi / ra lenh cap nhat (components/layout/desktop-update-gate.tsx ben erpgence).
+ipcMain.handle("gence:update-state", () => updateState());
+ipcMain.handle("gence:update-check", async () => {
+  await checkNow();
+  return updateState();
+});
+ipcMain.on("gence:update-install", () => installUpdate(true));
+
 ipcMain.on("gence:badge", (_e, count: number) => {
   const c = Math.max(0, Number(count) || 0);
   app.setBadgeCount(c); // macOS dock / Linux; Windows overlay se bo sung sau
@@ -433,9 +442,10 @@ if (!gotLock) {
         isQuitting = true;
         saveBounds();
       },
-      onPending: () => {
+      onPending: (version) => {
         refreshTrayMenu();
         refreshToolbar();
+        mainView?.webContents.send("gence:update-ready", version);
       },
     });
 

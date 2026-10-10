@@ -22,6 +22,14 @@ export interface GenceDesktopBridge {
   loadCredentials: () => Promise<{ username: string; password: string } | null>;
   /** Xoa credential da luu. */
   clearCredentials: () => Promise<boolean>;
+
+  // --- Cap nhat app (co tu 1.0.9; ban cu hon khong co ba ham nay) ---
+  /** Bao app kiem tra ban moi ngay (co thi tu tai). Tra ve ban dang chay + ban da tai xong. */
+  checkUpdate: () => Promise<{ current: string; ready: string | null }>;
+  /** Thoat, cai ban da tai xong roi mo lai app. Khong lam gi neu chua co ban nao tai xong. */
+  installUpdate: () => void;
+  /** Dang ky callback khi mot ban moi vua tai xong, san sang cai. */
+  onUpdateReady: (cb: (version: string) => void) => () => void;
 }
 
 const bridge: GenceDesktopBridge = {
@@ -38,6 +46,13 @@ const bridge: GenceDesktopBridge = {
   saveCredentials: (cred) => ipcRenderer.invoke("gence:cred-save", cred),
   loadCredentials: () => ipcRenderer.invoke("gence:cred-load"),
   clearCredentials: () => ipcRenderer.invoke("gence:cred-clear"),
+  checkUpdate: () => ipcRenderer.invoke("gence:update-check"),
+  installUpdate: () => ipcRenderer.send("gence:update-install"),
+  onUpdateReady: (cb) => {
+    const listener = (_e: unknown, version: string) => cb(version);
+    ipcRenderer.on("gence:update-ready", listener);
+    return () => ipcRenderer.removeListener("gence:update-ready", listener);
+  },
 };
 
 contextBridge.exposeInMainWorld("genceDesktop", bridge);

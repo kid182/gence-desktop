@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Notification } from "electron";
+import { app, BrowserWindow, Notification, powerMonitor } from "electron";
 import * as path from "path";
 import * as fs from "fs";
 import { autoUpdater } from "electron-updater";
@@ -11,14 +11,19 @@ import { APP_NAME } from "./config";
  * khong bao gio chay: ban moi nam san trong may ma nhan vien van dung ban cu ca thang. Vi vay
  * tai xong la app TU cai:
  *   - cua so dang an (o khay / vua khoi dong cung may) du lau -> cai im lang roi mo lai, van an;
- *   - cua so dang mo -> hien nut "Cap nhat" tren thanh tren cung + muc o menu khay, va tu cai
- *     sau khi nguoi dung dong cua so xuong khay.
+ *   - cua so dang mo -> hien nut "Cap nhat" tren thanh tren cung + muc o menu khay, ERP hien
+ *     bang bat cap nhat (qua cau noi genceDesktop), va tu cai sau khi nguoi dung dong cua so
+ *     xuong khay hoac bo may khong dung toi du lau.
  */
 const CHECK_EVERY_MS = 60 * 60 * 1000;
 // Cho cua so an lien tuc bang nay roi moi cai - tranh truong hop dong nham roi mo lai ngay.
 const HIDDEN_BEFORE_INSTALL_MS =
   (!app.isPackaged && Number(process.env.GENCE_UPDATE_HIDDEN_MS)) || 5 * 60 * 1000;
 const RELAUNCH_MARKER_TTL_MS = 3 * 60 * 1000;
+// Cua so van mo nhung ca may khong ai dung chuot / ban phim bang nay -> cai luon roi mo lai.
+const IDLE_BEFORE_INSTALL_S =
+  (!app.isPackaged && Number(process.env.GENCE_UPDATE_IDLE_S)) || 15 * 60;
+const IDLE_POLL_MS = (!app.isPackaged && Number(process.env.GENCE_UPDATE_IDLE_POLL_MS)) || 60 * 1000;
 
 interface Hooks {
   getWindow: () => BrowserWindow | null;
@@ -31,6 +36,7 @@ interface Hooks {
 let hooks: Hooks | null = null;
 let pending: string | null = null;
 let timer: NodeJS.Timeout | null = null;
+let idleTimer: NodeJS.Timeout | null = null;
 
 const logFile = () => path.join(app.getPath("userData"), "updater.log");
 const markerFile = () => path.join(app.getPath("userData"), ".update-relaunch");
@@ -68,6 +74,21 @@ const windowVisible = (): boolean => {
 
 export function pendingVersion(): string | null {
   return pending;
+}
+
+/** Trang thai cho ERP doc qua cau noi: ban dang chay + ban da tai xong cho cai (neu co). */
+export function updateState(): { current: string; ready: string | null } {
+  return { current: app.getVersion(), ready: pending };
+}
+
+function watchIdle(): void {
+  if (idleTimer) return;
+  idleTimer = setInterval(() => {
+    if (pending && windowVisible() && powerMonitor.getSystemIdleTime() >= IDLE_BEFORE_INSTALL_S) {
+      log("may de khong, tu cai");
+      installUpdate(true);
+    }
+  }, IDLE_POLL_MS);
 }
 
 /** Thoat, cai ban da tai roi mo lai app. showAfter = false -> mo lai van an o khay. */
@@ -153,6 +174,7 @@ export function setupAutoUpdate(h: Hooks): void {
       }
     }
     arm();
+    watchIdle();
   });
   autoUpdater.on("error", (err) => log("loi: " + (err?.message || err)));
 
