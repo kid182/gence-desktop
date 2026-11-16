@@ -8,7 +8,9 @@ import { APP_URL, ALLOWED_HOSTS } from "./config";
  *
  * - Moi tab la mot WebContentsView chay erpgence, cung preload `genceDesktop`; chi tab dang chon hien, cac tab khac an
  *   (trang van chay ngam, giu nguyen cho dang lam).
- * - Nut "+" (Ctrl + T) NHAN BAN trang dang mo: tab moi mo dung duong dan cua tab hien tai, dat ngay ben phai.
+ * - Nut "+" (Ctrl + T) NHAN BAN trang dang mo nhu "Duplicate" cua Chrome: tab moi ngay ben phai, cung duong dan, mang theo
+ *   sessionStorage (bo loc / trang thai tam ERP giu o day) va tieu de. CHUA mang lich su lui / toi: Electron 32 chua co
+ *   navigationHistory.restore().
  * - Tieu de tab = ten menu. erpgence dat `document.title` = "<ten menu> - ERP Gence" (components/layout/activity-tracker);
  *   o day cat duoi " - ERP Gence". Ban web chua co thi tab hien "ERP Gence".
  * - Danh sach tab luu o userData/tabs.json, mo lai app (ke ca tu cai cap nhat ngam) thi mo lai dung cac tab cu.
@@ -110,14 +112,25 @@ export function listTabs(): TabInfo[] {
 
 /* ----------------------------- Thao tac ----------------------------- */
 
-export function newTab(url: string, opts: { activate?: boolean; afterId?: number } = {}): void {
+/** sessionStorage mang sang tab nhan ban, preload.ts xin mot lan luc trang dau tien cua tab nap (truoc script cua trang). */
+const hatGiong = new Map<number, [string, string][]>();
+export function layHatGiong(wcId: number): [string, string][] | null {
+  const h = hatGiong.get(wcId) ?? null;
+  hatGiong.delete(wcId);
+  return h;
+}
+
+export function newTab(
+  url: string,
+  opts: { activate?: boolean; afterId?: number; title?: string; sessionStorage?: [string, string][] } = {},
+): void {
   if (!win || !cfg || win.isDestroyed()) return;
   if (tabs.length >= TOI_DA) return;
   const view = new WebContentsView({
     webPreferences: { preload: cfg.preload, contextIsolation: true, nodeIntegration: false, spellcheck: true },
   });
   view.setBackgroundColor("#ffffff");
-  const tab: Tab = { id: ++seq, view, title: TEN_APP, loading: true };
+  const tab: Tab = { id: ++seq, view, title: opts.title || TEN_APP, loading: true };
   const sau = opts.afterId != null ? tabs.findIndex((t) => t.id === opts.afterId) : -1;
   if (sau >= 0) tabs.splice(sau + 1, 0, tab);
   else tabs.push(tab);
@@ -136,6 +149,7 @@ export function newTab(url: string, opts: { activate?: boolean; afterId?: number
     tab.title = tieuDe(wc.getTitle());
     doi();
   });
+  if (opts.sessionStorage?.length) hatGiong.set(wc.id, opts.sessionStorage);
   wc.on("did-navigate", luu);
   wc.on("did-navigate-in-page", luu);
   // Trang tu dong (window.close) hoac renderer chet han -> bo tab, khong de o trong.
@@ -160,10 +174,29 @@ export function newTab(url: string, opts: { activate?: boolean; afterId?: number
   else doi();
 }
 
-/** Nut "+": nhan ban trang dang mo vao tab moi ngay ben phai. */
-export function duplicateActive(): void {
-  const cur = activeTab();
-  newTab(cur ? cur.webContents.getURL() : APP_URL, { afterId: activeId });
+/** Nut "+": nhan ban trang dang mo (duong dan + sessionStorage + tieu de) vao tab moi ngay ben phai. */
+export async function duplicateActive(): Promise<void> {
+  const nguon = tabs.find((t) => t.id === activeId);
+  if (!nguon || nguon.view.webContents.isDestroyed()) {
+    newTab(APP_URL);
+    return;
+  }
+  const wc = nguon.view.webContents;
+  let ss: [string, string][] = [];
+  try {
+    // Doc toi da 1 giay - trang treo thi van mo tab, chi thieu trang thai tam.
+    ss = await Promise.race([
+      wc.executeJavaScript("Object.entries(sessionStorage)", false) as Promise<[string, string][]>,
+      new Promise<[string, string][]>((r) => setTimeout(() => r([]), 1000)),
+    ]);
+  } catch {
+    ss = [];
+  }
+  newTab(wc.getURL(), {
+    afterId: nguon.id,
+    title: nguon.title,
+    sessionStorage: Array.isArray(ss) ? ss.filter((x) => Array.isArray(x) && x.length === 2).slice(0, 500) : [],
+  });
 }
 
 export function activateTab(id: number): void {

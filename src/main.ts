@@ -42,7 +42,7 @@ import {
   consumeRelaunchHidden,
 } from "./updater";
 import { chungThu, kyPdf, type TuyChonKy } from "./kyso";
-import { initTabs, layoutTabs, activeTab, allTabs, newTab, saveTabsBeforeQuit, disposeTabs } from "./tabs";
+import { initTabs, layoutTabs, activeTab, allTabs, newTab, saveTabsBeforeQuit, disposeTabs, layHatGiong } from "./tabs";
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -320,6 +320,11 @@ function showWindow(): void {
 }
 
 /* ----------------------------- IPC (cau noi web) ----------------------------- */
+// Tab nhan ban xin sessionStorage cua tab goc (preload.ts, dong bo, mot lan). Chi trang ERP.
+ipcMain.on("gence:tab-seed", (e) => {
+  e.returnValue = hostOf(e.senderFrame?.url ?? "") === hostOf(APP_URL) ? layHatGiong(e.sender.id) : null;
+});
+
 ipcMain.on("gence:version", (e) => {
   e.returnValue = app.getVersion();
 });

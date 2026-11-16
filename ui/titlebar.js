@@ -32,7 +32,6 @@ bar.on("bar:state", (s) => {
   reloadBtn.classList.toggle("loading", loading);
   reloadBtn.title = loading ? "Dừng tải trang" : "Tải lại trang (F5)";
   reloadBtn.setAttribute("aria-label", reloadBtn.title);
-  $("load").hidden = !loading;
 
   $("zoom").hidden = s.zoom === 100;
   $("zoom").textContent = s.zoom + "%";
@@ -75,7 +74,9 @@ function taoTab(id) {
     e.stopPropagation();
     bar.do("tab-close", id);
   };
-  el.append(ic, ten, x);
+  const vach = document.createElement("span");
+  vach.className = "vach";
+  el.append(vach, ic, ten, x);
 
   el.onmousedown = (e) => {
     if (e.button === 0 && !el.classList.contains("on")) bar.do("tab-activate", id);
@@ -108,6 +109,14 @@ function taoTab(id) {
   return el;
 }
 
+/** Dau tab: chi hien vong quay khi trang dang tai; xong thi bo trong (anh Phuc: khong cham mau, khong favicon). */
+function veBieuTuong(el, t) {
+  const quay = !!t.loading;
+  if (el.dataset.ic === String(quay)) return;
+  el.dataset.ic = String(quay);
+  el.querySelector(".ic").innerHTML = quay ? "<span class=\"quay\"></span>" : "";
+}
+
 function veTabs(list) {
   dsTab = list;
   const mot = list.length === 1;
@@ -128,7 +137,7 @@ function veTabs(list) {
     el.classList.toggle("mot", mot);
     el.setAttribute("aria-selected", t.active ? "true" : "false");
     el.title = t.title;
-    el.querySelector(".ic").classList.toggle("spin", !!t.loading);
+    veBieuTuong(el, t);
     const ten = el.querySelector(".t");
     if (ten.textContent !== t.title) ten.textContent = t.title;
     el.querySelector(".x").setAttribute("aria-label", "Đóng tab " + t.title);

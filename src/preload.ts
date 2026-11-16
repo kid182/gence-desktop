@@ -88,3 +88,12 @@ const bridge: GenceDesktopBridge = {
 contextBridge.exposeInMainWorld("genceDesktop", bridge);
 // erpgence chay trong WebContentsView ben duoi title bar -> khong can chen dai keo nua
 // (title bar cua BrowserWindow lo viec keo/di chuyen cua so). Web fill full view nhu trinh duyet.
+
+// Tab nhan ban (nut "+" / Ctrl + T, src/tabs.ts): lay sessionStorage cua tab goc dat vao TRUOC khi script cua trang chay,
+// nhu "Duplicate" cua Chrome. Chi co o lan nap dau tien cua tab moi; cac lan khac main tra null.
+try {
+  const ds = ipcRenderer.sendSync("gence:tab-seed") as [string, string][] | null;
+  if (Array.isArray(ds)) for (const [k, v] of ds) window.sessionStorage.setItem(k, v);
+} catch {
+  /* trang khong cho sessionStorage / ban cu - bo qua */
+}

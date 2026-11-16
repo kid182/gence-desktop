@@ -180,6 +180,8 @@ function popupMenu(pos?: { x?: number; y?: number }): void {
   const zoom = Math.round(getSettings().zoom * 100);
   const hint = (accelerator: string) => ({ accelerator, registerAccelerator: false });
   const menu = Menu.buildFromTemplate([
+    { label: "Nhân bản tab", ...hint("CmdOrCtrl+T"), click: () => void duplicateActive() },
+    { type: "separator" },
     { label: "Tìm trong trang", ...hint("CmdOrCtrl+F"), click: openFind },
     { label: "In trang", ...hint("CmdOrCtrl+P"), click: () => wc.print() },
     { type: "separator" },
@@ -246,7 +248,7 @@ function onKey(e: Electron.Event, input: Electron.Input): void {
   else if (mod && key === "0") setZoom(1);
   else if (key === "f12" || (mod && input.shift && key === "i")) openDevTools();
   // Tab kieu Chrome: Ctrl + T nhan ban trang dang mo, Ctrl + W dong, Ctrl + Tab chuyen, Ctrl + 1..9 nhay toi.
-  else if (mod && key === "t") duplicateActive();
+  else if (mod && key === "t") void duplicateActive();
   else if (mod && (key === "w" || key === "f4")) closeActive();
   else if (input.control && key === "tab") stepTab(input.shift ? -1 : 1);
   else if (mod && (key === "pagedown" || key === "pageup")) stepTab(key === "pagedown" ? 1 : -1);
@@ -300,7 +302,7 @@ function onAction(sender: WebContents, action: string, arg: unknown): void {
       installUpdate(true);
       break;
     case "tab-new":
-      duplicateActive();
+      void duplicateActive();
       break;
     case "tab-activate":
       activateTab(Number(arg));

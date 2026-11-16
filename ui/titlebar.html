@@ -5,91 +5,113 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'">
 <title>ERP Gence</title>
 <style>
-  /* --h phai khop TITLEBAR_HEIGHT trong src/config.ts */
-  :root { --h: 40px; --bg: #183756; --fg: #fff; --ac: #eab308; }
+  /*
+   * Mot hang: ten app + nut dieu huong | dai tab | tien ich (giu bo cuc cu). Tu 1.1.2 tab ve kieu Chrome (anh Phuc 16/11/2026):
+   * nen hang toi --frame, tab dang chon sang mau --bar + bo goc tren + hai chan cong, vach ngan giua tab, re chuot sang nhe.
+   * KHONG dung vach mau duoi tab (anh dan). --strip khop TITLEBAR_HEIGHT trong src/config.ts (cung la chieu cao titleBarOverlay).
+   */
+  :root {
+    --strip: 40px;
+    --frame: #0e2135; --bar: #183756; --fg: #fff; --ac: #eab308;
+    --tab-h: 34px; --r: 8px;
+  }
   html, body {
-    margin: 0; height: 100vh; overflow: hidden; background: var(--bg); color: var(--fg);
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    margin: 0; height: 100vh; overflow: hidden; background: var(--frame); color: var(--fg);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size: 12.5px;
   }
   [hidden] { display: none !important; }
-
-  /* Chi chiem phan khong bi nut min/max/close cua he dieu hanh che (Window Controls Overlay). */
-  .bar {
-    position: fixed; top: 0; left: env(titlebar-area-x, 0px);
-    width: env(titlebar-area-width, calc(100% - 140px)); height: var(--h);
-    box-sizing: border-box; padding: 0 6px 0 12px;
-    display: flex; align-items: center; gap: 2px;
-    font-size: 12.5px; user-select: none; -webkit-app-region: drag;
-  }
-  .brand { display: flex; align-items: center; gap: 8px; margin-right: 10px; font-weight: 600; letter-spacing: .3px; white-space: nowrap; }
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ac); flex: 0 0 auto; }
-  .ac { color: var(--ac); }
-  .grow { flex: 1 1 auto; min-width: 12px; }
-
-  /* ---------- Dai tab kieu Chrome (tu 1.1.1) ---------- */
-  /* Kieu Chrome: cac tab rong bang nhau toi da 240px, het cho thi CUNG co lai; nut + nam ngay sau tab cuoi; khoang trong
-     con lai trong dai van keo duoc cua so. Rat nhieu tab (duoi 40px moi tab) thi cuon ngang. */
-  .tabs {
-    flex: 1 1 auto; min-width: 0; height: 100%; margin-left: 8px;
-    display: flex; align-items: center; gap: 2px; overflow-x: auto; overflow-y: hidden;
-    scrollbar-width: none; -webkit-app-region: drag;
-  }
-  .tabs::-webkit-scrollbar { display: none; }
-  .tab {
-    -webkit-app-region: no-drag; position: relative; flex: 0 1 240px; min-width: 40px; height: 30px;
-    box-sizing: border-box; padding: 0 4px 0 10px; border-radius: 8px;
-    display: flex; align-items: center; gap: 7px;
-    color: rgba(255, 255, 255, .72); font-size: 12.5px; cursor: default;
-  }
-  .tab:hover { background: rgba(255, 255, 255, .08); color: #fff; }
-  .tab.on { background: #2b5680; color: #fff; box-shadow: inset 0 -2px 0 var(--ac); }
-  /* Vach ngan giua hai tab khong chon, kieu Chrome. */
-  .tab:not(.on):not(:hover) + .tab:not(.on):not(:hover)::before {
-    content: ""; position: absolute; left: -2px; top: 8px; bottom: 8px; width: 1px; background: rgba(255, 255, 255, .18);
-  }
-  .tab .ic { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%; background: rgba(255, 255, 255, .45); }
-  .tab.on .ic { background: var(--ac); }
-  .tab .ic.spin {
-    width: 11px; height: 11px; background: none; border: 2px solid rgba(255, 255, 255, .25);
-    border-top-color: var(--ac); box-sizing: border-box; animation: spin .8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .tab .t { flex: 1 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-  .tab .x { width: 22px; height: 22px; border-radius: 50%; opacity: 0; }
-  .tab:hover .x, .tab.on .x { opacity: .8; }
-  .tab .x:hover { opacity: 1; background: rgba(255, 255, 255, .18); }
-  .tab .x svg { width: 12px; height: 12px; stroke-width: 2.4; }
-  .tab.mot .x { display: none; }
-  /* Tab hep (titlebar.js do be rong): tab khong chon bo dau x; rat hep thi bo chu, chi con cham - tab dang chon giu dau x. */
-  .tabs.hep .tab:not(.on) .x { display: none; }
-  .tabs.hep .tab { padding: 0 2px 0 8px; gap: 5px; }
-  .tabs.rathep .tab { padding: 0; justify-content: center; }
-  .tabs.rathep .tab .t { display: none; }
-  .tabs.rathep .tab.on:not(.mot) .ic { display: none; }
-  .tab.keo { opacity: .5; }
-  .tab.dich { box-shadow: inset 2px 0 0 var(--ac); }
-  #newTab { flex: 0 0 auto; margin-left: 2px; border-radius: 50%; width: 30px; height: 30px; }
-  .grow.keo-cua-so { flex: 0 0 28px; }
+  svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 
   button {
     -webkit-app-region: no-drag; position: relative; flex: 0 0 auto;
-    width: 32px; height: 30px; padding: 0; border: 0; border-radius: 5px;
+    width: 32px; height: 30px; padding: 0; border: 0; border-radius: 6px;
     display: grid; place-items: center;
     background: transparent; color: var(--fg); font: inherit; cursor: default;
   }
-  button:hover { background: rgba(255, 255, 255, .14); }
-  button:active { background: rgba(255, 255, 255, .24); }
+  button:hover { background: rgba(255, 255, 255, .12); }
+  button:active { background: rgba(255, 255, 255, .22); }
   button:disabled { opacity: .35; background: transparent; }
   button:focus-visible { outline: 1.5px solid var(--ac); outline-offset: -1.5px; }
-  button.on { background: rgba(255, 255, 255, .18); }
-  svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+  button.on { background: rgba(255, 255, 255, .16); }
 
+  /* ================= Hang 1: dai tab ================= */
+  .strip {
+    position: fixed; top: 0; left: env(titlebar-area-x, 0px);
+    width: env(titlebar-area-width, calc(100% - 140px)); height: var(--strip);
+    background: var(--frame); box-sizing: border-box; padding-left: 10px;
+    display: flex; align-items: flex-end; user-select: none; -webkit-app-region: drag;
+  }
+  .brand {
+    align-self: center; display: flex; align-items: center; gap: 7px; margin-right: 10px;
+    font-weight: 600; font-size: 12px; letter-spacing: .3px; white-space: nowrap; color: rgba(255, 255, 255, .9);
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ac); }
+  .ac { color: var(--ac); }
+
+  .tabs {
+    flex: 1 1 auto; min-width: 0; height: 100%; padding: 0 var(--r);
+    display: flex; align-items: flex-end; overflow-x: auto; overflow-y: hidden;
+    scrollbar-width: none; -webkit-app-region: drag;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+
+  .tab {
+    -webkit-app-region: no-drag; position: relative; flex: 0 1 240px; min-width: 44px; height: var(--tab-h);
+    box-sizing: border-box; padding: 0 6px 0 12px; border-radius: var(--r) var(--r) 0 0;
+    display: flex; align-items: center; gap: 8px;
+    color: rgba(255, 255, 255, .72); cursor: default;
+  }
+  /* Hover: nen nhat, bo goc tren, KHONG noi xuong (nhu Chrome). */
+  .tab:hover:not(.on) { color: #fff; }
+  .tab:hover:not(.on)::after {
+    content: ""; position: absolute; inset: 4px 2px 4px 2px; border-radius: var(--r);
+    background: rgba(255, 255, 255, .08); z-index: -1;
+  }
+  .tab { z-index: 0; }
+  /* Tab dang chon: cung mau thanh cong cu + hai "chan" cong noi xuong. */
+  .tab.on { background: var(--bar); color: #fff; z-index: 2; }
+  .tab.on::before, .tab.on::after {
+    content: ""; position: absolute; bottom: 0; width: var(--r); height: var(--r); pointer-events: none;
+  }
+  .tab.on::before { left: calc(-1 * var(--r)); background: radial-gradient(circle at 0 0, transparent calc(var(--r) - .5px), var(--bar) var(--r)); }
+  .tab.on::after { right: calc(-1 * var(--r)); background: radial-gradient(circle at 100% 0, transparent calc(var(--r) - .5px), var(--bar) var(--r)); }
+
+  /* Vach ngan giua tab - an khi ke tab dang chon hoac dang re chuot. */
+  .tab .vach { position: absolute; left: 0; top: 9px; bottom: 9px; width: 1px; background: rgba(255, 255, 255, .22); }
+  .tab:first-child .vach, .tab.on .vach, .tab.on + .tab .vach, .tab:hover .vach, .tab:hover + .tab .vach { display: none; }
+
+  .tab .ic { flex: 0 0 auto; width: 16px; height: 16px; display: grid; place-items: center; }
+  .tab .ic:empty { display: none; }
+  .tab .ic .quay {
+    width: 13px; height: 13px; border-radius: 50%; box-sizing: border-box;
+    border: 2px solid rgba(255, 255, 255, .22); border-top-color: var(--ac); animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .tab .t { flex: 1 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12.5px; }
+  .tab .x { width: 20px; height: 20px; border-radius: 50%; color: inherit; }
+  .tab .x:hover { background: rgba(255, 255, 255, .16); }
+  .tab .x svg { width: 12px; height: 12px; stroke-width: 2.3; }
+  .tab.mot .x { display: none; }
+  .tab.keo { opacity: .55; }
+  .tab.dich { box-shadow: inset 2px 0 0 rgba(255, 255, 255, .7); }
+  /* Tab hep (titlebar.js do be rong): tab khong chon bo dau x; rat hep chi con bieu tuong - tab dang chon giu dau x. */
+  .tabs.hep .tab:not(.on) .x { display: none; }
+  .tabs.hep .tab { padding: 0 4px 0 10px; gap: 6px; }
+  .tabs.rathep .tab { padding: 0; justify-content: center; }
+  .tabs.rathep .tab .t { display: none; }
+  .tabs.rathep .tab.on:not(.mot) .ic { display: none; }
+
+  #newTab { align-self: center; flex: 0 0 auto; margin: 2px 0 0 4px; width: 28px; height: 28px; border-radius: 50%; }
+  .keo-cua-so { flex: 0 0 28px; }
+  /* Nut tien ich ben phai dai tab (tai xuong, menu, cap nhat, o tim khi bam Ctrl + F). */
+  /* Nut dieu huong canh ten app, can giua hang (dai tab can day). */
+  .strip > button { align-self: center; }
   #reload .i-stop, #reload.loading .i-reload { display: none; }
   #reload.loading .i-stop { display: block; }
+  .tien-ich { align-self: center; display: flex; align-items: center; gap: 2px; padding-right: 4px; }
 
   .zoom { width: auto; padding: 0 8px; font-size: 11.5px; font-weight: 600; color: var(--ac); }
-  /* Nut chi hien khi ban moi da tai xong: bam la khoi dong lai va cap nhat. */
-  .upd { width: auto; height: 22px; padding: 0 9px 0 7px; margin-right: 4px; gap: 5px; grid-auto-flow: column; background: var(--ac); color: #183756; font-size: 11.5px; font-weight: 700; }
+  .upd { width: auto; height: 24px; padding: 0 9px 0 7px; margin-right: 4px; gap: 5px; grid-auto-flow: column; background: var(--ac); color: #183756; font-size: 11.5px; font-weight: 700; }
   .upd:hover { background: #facc15; }
   .upd:active { background: #ca8a04; }
   .upd svg { width: 13px; height: 13px; stroke-width: 2.4; }
@@ -97,7 +119,7 @@
 
   .find {
     -webkit-app-region: no-drag; display: flex; align-items: center; gap: 2px;
-    height: 30px; padding: 0 2px 0 8px; margin-right: 4px; border-radius: 5px;
+    height: 30px; padding: 0 2px 0 8px; margin-right: 4px; border-radius: 6px;
     background: rgba(255, 255, 255, .12);
   }
   .find:focus-within { background: rgba(255, 255, 255, .18); box-shadow: inset 0 0 0 1px rgba(234, 179, 8, .7); }
@@ -112,20 +134,17 @@
   .find button { width: 24px; height: 22px; }
   .find button svg { width: 14px; height: 14px; }
 
-  /* Nut tep tai xuong: vach tien do khi dang tai, cham vang khi co tep moi tai xong chua xem. */
   .dl-prog { position: absolute; left: 6px; right: 6px; bottom: 2px; height: 2px; border-radius: 1px; background: rgba(255, 255, 255, .25); overflow: hidden; }
   .dl-prog i { display: block; height: 100%; width: 0; background: var(--ac); transition: width .2s linear; }
-  .dl-dot { position: absolute; top: 3px; right: 4px; width: 7px; height: 7px; border-radius: 50%; background: var(--ac); box-shadow: 0 0 0 1.5px var(--bg); }
+  .dl-dot { position: absolute; top: 3px; right: 4px; width: 7px; height: 7px; border-radius: 50%; background: var(--ac); box-shadow: 0 0 0 1.5px var(--frame); }
 
-  /* Vach chay duoi day thanh khi trang dang nap. */
-  .load { position: fixed; left: 0; top: calc(var(--h) - 2px); width: 100%; height: 2px; overflow: hidden; pointer-events: none; }
-  .load i { display: block; width: 30%; height: 100%; background: var(--ac); animation: slide 1.1s ease-in-out infinite; }
-  @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
-  @media (prefers-reduced-motion: reduce) { .load i { animation: none; width: 100%; opacity: .7; } .dl-prog i { transition: none; } .tab .ic.spin { animation: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    .dl-prog i { transition: none; } .tab .ic .quay { animation: none; }
+  }
 </style>
 </head>
 <body>
-<div class="bar">
+<div class="strip">
   <div class="brand"><span class="dot"></span><span><span class="ac">ERP</span> Gence</span></div>
 
   <button id="back" title="Quay lại (Alt + ←)" aria-label="Quay lại" disabled>
@@ -147,44 +166,42 @@
       <svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
     </button>
   </div>
+  <div class="keo-cua-so"></div>
+  <div class="tien-ich">
+    <div class="find" id="find" hidden>
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="findInput" type="text" placeholder="Tìm trong trang" spellcheck="false" autocomplete="off" aria-label="Tìm trong trang">
+      <span class="count" id="findCount"></span>
+      <button id="findPrev" title="Kết quả trước (Shift + Enter)" aria-label="Kết quả trước">
+        <svg viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg>
+      </button>
+      <button id="findNext" title="Kết quả sau (Enter)" aria-label="Kết quả sau">
+        <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+      <button id="findClose" title="Đóng (Esc)" aria-label="Đóng ô tìm">
+        <svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <span class="toast" id="toast" role="status" hidden></span>
+    <button class="zoom" id="zoom" title="Đang thu phóng - bấm để về 100%" hidden></button>
 
-  <div class="grow keo-cua-so"></div>
-
-  <div class="find" id="find" hidden>
-    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-    <input id="findInput" type="text" placeholder="Tìm trong trang" spellcheck="false" autocomplete="off" aria-label="Tìm trong trang">
-    <span class="count" id="findCount"></span>
-    <button id="findPrev" title="Kết quả trước (Shift + Enter)" aria-label="Kết quả trước">
-      <svg viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg>
+    <button class="upd" id="update" hidden>
+      <svg viewBox="0 0 24 24"><path d="M12 17V3"/><path d="m6 11 6 6 6-6"/><path d="M19 21H5"/></svg>
+      <span>Cập nhật</span>
     </button>
-    <button id="findNext" title="Kết quả sau (Enter)" aria-label="Kết quả sau">
-      <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+    <button id="findBtn" title="Tìm trong trang (Ctrl + F)" aria-label="Tìm trong trang">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
     </button>
-    <button id="findClose" title="Đóng (Esc)" aria-label="Đóng ô tìm">
-      <svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    <button id="dl" title="Tệp tải xuống (Ctrl + J)" aria-label="Tệp tải xuống">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+      <span class="dl-dot" id="dlDot" hidden></span>
+      <span class="dl-prog" id="dlProg" hidden><i id="dlFill"></i></span>
+    </button>
+    <button id="more" title="Tiện ích khác" aria-label="Tiện ích khác">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
     </button>
   </div>
-
-  <span class="toast" id="toast" role="status" hidden></span>
-  <button class="zoom" id="zoom" title="Đang thu phóng - bấm để về 100%" hidden></button>
-
-  <button class="upd" id="update" hidden>
-    <svg viewBox="0 0 24 24"><path d="M12 17V3"/><path d="m6 11 6 6 6-6"/><path d="M19 21H5"/></svg>
-    <span>Cập nhật</span>
-  </button>
-  <button id="findBtn" title="Tìm trong trang (Ctrl + F)" aria-label="Tìm trong trang">
-    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-  </button>
-  <button id="dl" title="Tệp tải xuống (Ctrl + J)" aria-label="Tệp tải xuống">
-    <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
-    <span class="dl-dot" id="dlDot" hidden></span>
-    <span class="dl-prog" id="dlProg" hidden><i id="dlFill"></i></span>
-  </button>
-  <button id="more" title="Tiện ích khác" aria-label="Tiện ích khác">
-    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-  </button>
 </div>
-<div class="load" id="load" hidden><i></i></div>
 <script src="titlebar.js"></script>
 </body>
 </html>

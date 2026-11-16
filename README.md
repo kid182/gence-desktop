@@ -124,6 +124,7 @@ Màn hồ sơ Kinh doanh trên erpgence (nút "Ký số") gọi `window.genceDes
 - Thanh trên cùng cao 40 px (`TITLEBAR_HEIGHT`, khớp `--h` trong `ui/titlebar.html`), dải tab kiểu Chrome giữa nút điều hướng và tiện ích.
 - Mỗi tab là một `WebContentsView` chạy erpgence; tab không chọn ẩn nhưng trang vẫn chạy.
 - Nút "+" / Ctrl + T **nhân bản trang đang mở** sang tab mới ngay bên phải. Link `target=_blank` cùng host cũng mở thành tab.
+- Kiểu Chrome (1.1.2): nền hàng tối, tab đang chọn sáng màu + bo góc trên + hai chân cong, vạch ngăn giữa tab, rê chuột sáng nhẹ; không vạch màu dưới tab, không chấm, không favicon (chỉ vòng quay khi đang tải). Nút "+" nhân bản cả sessionStorage của trang (chưa mang lịch sử lùi / tới - Electron 32 chưa có navigationHistory.restore).
 - Tab rộng tối đa 240 px, nhiều tab thì cùng co lại như Chrome (hẹp dưới 96 px bỏ dấu x ở tab không chọn, dưới 56 px chỉ còn chấm); dưới 40 px thì cuộn ngang. Dải tab cập nhật tại chỗ theo id, KHÔNG vẽ lại cả dải (1.1.1 vẽ lại nên bấm dấu x không đóng được tab).
 - Ctrl + W đóng, Ctrl + Tab / Ctrl + Shift + Tab chuyển, Ctrl + 1..9 nhảy tới, chuột giữa đóng, kéo thả đổi chỗ. Đóng tab cuối = về một tab trang chủ.
 - Tên tab = tên menu: erpgence đặt `document.title` = "<tên menu> - ERP Gence" (`components/layout/activity-tracker.tsx`), desktop cắt đuôi.
