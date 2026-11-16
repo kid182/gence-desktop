@@ -27,4 +27,5 @@ export const WINDOW_DEFAULT = { width: 1440, height: 900 };
 export const WINDOW_MIN = { width: 1024, height: 680 };
 
 /** Chieu cao thanh tren cung (px). Phai khop --h trong ui/titlebar.html. */
-export const TITLEBAR_HEIGHT = 34;
+/** 34 -> 40 tu 1.1.1 de dai tab de doc (anh Phuc 16/11/2026). */
+export const TITLEBAR_HEIGHT = 40;

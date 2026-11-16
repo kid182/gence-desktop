@@ -12,6 +12,19 @@ import { APP_URL, TITLEBAR_HEIGHT } from "./config";
 import { getSettings, setSetting } from "./settings";
 import { initDownloads, listDownloads, downloadAction, DownloadEntry } from "./downloads";
 import { pendingVersion, installUpdate } from "./updater";
+import {
+  activeTab,
+  allTabs,
+  isActive,
+  listTabs,
+  activateTab,
+  closeTab,
+  closeActive,
+  duplicateActive,
+  stepTab,
+  tabAt,
+  moveTab,
+} from "./tabs";
 
 /**
  * Thanh tren cung: dieu huong (lui / toi / tai lai / trang chu), tim trong trang, tep tai xuong,
@@ -28,14 +41,17 @@ const ZOOM_STEPS = [0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2];
 const isMac = process.platform === "darwin";
 
 let win: BrowserWindow | null = null;
-let view: WebContentsView | null = null;
 let panel: WebContentsView | null = null;
 let panelOpen = false;
 let panelHiddenAt = 0;
 let panelHeight = 160;
 
 const alive = (wc?: WebContents | null): wc is WebContents => !!wc && !wc.isDestroyed();
-const page = () => (view && alive(view.webContents) ? view.webContents : null);
+/** webContents cua tab dang chon (src/tabs.ts). */
+const page = () => {
+  const v = activeTab();
+  return v && alive(v.webContents) ? v.webContents : null;
+};
 
 function sendBar(channel: string, data?: unknown): void {
   if (win && !win.isDestroyed() && alive(win.webContents)) win.webContents.send(channel, data);
@@ -56,6 +72,40 @@ function pushState(): void {
 
 /** Day lai trang thai xuong thanh tren cung (vd vua co ban cap nhat). */
 export const refreshToolbar = pushState;
+
+/* ----------------------------- Tab ----------------------------- */
+let tabTruoc: WebContents | null = null;
+
+/** tabs.ts bao danh sach / tieu de / tab dang chon doi -> ve lai dai tab + trang thai nut cua tab dang chon. */
+export function onTabsChanged(): void {
+  sendBar("bar:tabs", listTabs());
+  const wc = page();
+  if (wc !== tabTruoc) {
+    // Doi tab: luot tim cu thuoc tab truoc, dong o tim cho khoi lech ket qua.
+    if (tabTruoc && alive(tabTruoc)) tabTruoc.stopFindInPage("clearSelection");
+    sendBar("bar:find-reset");
+    tabTruoc = wc;
+  }
+  pushState();
+}
+
+/** Gan cac nghe su kien cua thanh tren cung vao webContents cua MOT tab (goi tu tabs.ts khi tao tab). */
+export function wireTab(wc: WebContents): void {
+  const neuDangChon = () => {
+    if (isActive(wc)) pushState();
+  };
+  wc.on("did-start-loading", neuDangChon);
+  wc.on("did-stop-loading", neuDangChon);
+  wc.on("did-navigate", neuDangChon);
+  wc.on("did-navigate-in-page", neuDangChon);
+  // He so thu phong da luu ap lai moi lan trang nap xong.
+  wc.on("dom-ready", () => wc.setZoomFactor(getSettings().zoom));
+  wc.on("zoom-changed", (_e, dir) => stepZoom(dir === "in" ? 1 : -1)); // Ctrl + lan chuot
+  wc.on("found-in-page", (_e, r) => {
+    if (r.finalUpdate && isActive(wc)) sendBar("bar:find", { active: r.activeMatchOrdinal, total: r.matches });
+  });
+  wc.on("before-input-event", onKey);
+}
 
 function pushDownloads(list: DownloadEntry[] = listDownloads()): void {
   sendBar("bar:downloads", list);
@@ -92,7 +142,7 @@ function hidePanel(): void {
 /* ----------------------------- Thu phong ----------------------------- */
 function setZoom(factor: number): void {
   setSetting("zoom", factor);
-  page()?.setZoomFactor(factor);
+  for (const v of allTabs()) if (alive(v.webContents)) v.webContents.setZoomFactor(factor);
   pushState();
 }
 
@@ -195,6 +245,12 @@ function onKey(e: Electron.Event, input: Electron.Input): void {
   else if (mod && key === "-") stepZoom(-1);
   else if (mod && key === "0") setZoom(1);
   else if (key === "f12" || (mod && input.shift && key === "i")) openDevTools();
+  // Tab kieu Chrome: Ctrl + T nhan ban trang dang mo, Ctrl + W dong, Ctrl + Tab chuyen, Ctrl + 1..9 nhay toi.
+  else if (mod && key === "t") duplicateActive();
+  else if (mod && (key === "w" || key === "f4")) closeActive();
+  else if (input.control && key === "tab") stepTab(input.shift ? -1 : 1);
+  else if (mod && (key === "pagedown" || key === "pageup")) stepTab(key === "pagedown" ? 1 : -1);
+  else if (mod && !input.shift && /^[1-9]$/.test(key)) tabAt(Number(key));
   else hit = false;
 
   if (hit) e.preventDefault();
@@ -215,6 +271,7 @@ function onAction(sender: WebContents, action: string, arg: unknown): void {
 
   switch (action) {
     case "ready":
+      sendBar("bar:tabs", listTabs());
       pushState();
       pushDownloads();
       break;
@@ -242,6 +299,20 @@ function onAction(sender: WebContents, action: string, arg: unknown): void {
     case "update-install":
       installUpdate(true);
       break;
+    case "tab-new":
+      duplicateActive();
+      break;
+    case "tab-activate":
+      activateTab(Number(arg));
+      break;
+    case "tab-close":
+      closeTab(Number(arg));
+      break;
+    case "tab-move": {
+      const m = (arg ?? {}) as { id?: number; to?: number };
+      moveTab(Number(m.id), Number(m.to));
+      break;
+    }
     case "menu":
       popupMenu(arg as { x?: number; y?: number });
       break;
@@ -299,10 +370,10 @@ export function initToolbar(): void {
   });
 }
 
-/** Goi moi lan tao cua so: gan thanh tren cung vao cua so + webview erpgence. */
-export function attachToolbar(w: BrowserWindow, v: WebContentsView): void {
+/** Goi moi lan tao cua so: gan thanh tren cung vao cua so. Tab erpgence gan qua wireTab(). */
+export function attachToolbar(w: BrowserWindow): void {
   win = w;
-  view = v;
+  tabTruoc = null;
   panelOpen = false;
 
   // Title bar la file noi bo co cau noi rieng -> khong cho dieu huong di noi khac.
@@ -321,26 +392,13 @@ export function attachToolbar(w: BrowserWindow, v: WebContentsView): void {
   // Bam ra ngoai (webview, title bar, cua so khac) -> dong bang.
   panel.webContents.on("blur", hidePanel);
 
-  const wc = v.webContents;
-  wc.on("did-start-loading", pushState);
-  wc.on("did-stop-loading", pushState);
-  wc.on("did-navigate", pushState);
-  wc.on("did-navigate-in-page", pushState);
-  // He so thu phong da luu ap lai moi lan trang nap xong.
-  wc.on("dom-ready", () => wc.setZoomFactor(getSettings().zoom));
-  wc.on("zoom-changed", (_e, dir) => stepZoom(dir === "in" ? 1 : -1)); // Ctrl + lan chuot
-  wc.on("found-in-page", (_e, r) => {
-    if (r.finalUpdate) sendBar("bar:find", { active: r.activeMatchOrdinal, total: r.matches });
-  });
-
-  wc.on("before-input-event", onKey);
   w.webContents.on("before-input-event", onKey);
   panel.webContents.on("before-input-event", onKey);
 }
 
 export function detachToolbar(): void {
   win = null;
-  view = null;
+  tabTruoc = null;
   panel = null;
   panelOpen = false;
 }

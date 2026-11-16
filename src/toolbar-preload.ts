@@ -4,7 +4,7 @@ import { contextBridge, ipcRenderer } from "electron";
  * Cau noi cho giao dien NOI BO cua thanh tren cung (ui/titlebar.html, ui/downloads.html).
  * KHONG gan vao webview erpgence - trang web chi co `window.genceDesktop` (preload.ts).
  */
-const CHANNELS = ["bar:state", "bar:downloads", "bar:find", "bar:find-open", "bar:toast"];
+const CHANNELS = ["bar:state", "bar:downloads", "bar:find", "bar:find-open", "bar:find-reset", "bar:toast", "bar:tabs"];
 
 contextBridge.exposeInMainWorld("genceBar", {
   platform: process.platform,

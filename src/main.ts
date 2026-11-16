@@ -1,7 +1,6 @@
 import {
   app,
   BrowserWindow,
-  WebContentsView,
   Tray,
   Menu,
   Notification,
@@ -28,6 +27,8 @@ import {
   initToolbar,
   attachToolbar,
   detachToolbar,
+  wireTab,
+  onTabsChanged,
   layoutPanel,
   refreshToolbar,
 } from "./toolbar";
@@ -41,9 +42,9 @@ import {
   consumeRelaunchHidden,
 } from "./updater";
 import { chungThu, kyPdf, type TuyChonKy } from "./kyso";
+import { initTabs, layoutTabs, activeTab, allTabs, newTab, saveTabsBeforeQuit, disposeTabs } from "./tabs";
 
 let mainWindow: BrowserWindow | null = null;
-let mainView: WebContentsView | null = null; // webview erpgence (nam duoi title bar)
 let tray: Tray | null = null;
 let isQuitting = false;
 
@@ -86,9 +87,9 @@ const isAllowed = (url: string) => ALLOWED_HOSTS.includes(hostOf(url));
 
 // Dinh vi lai webview erpgence ben duoi title bar khi cua so doi kich thuoc.
 function layoutView(): void {
-  if (!mainWindow || !mainView || mainWindow.isDestroyed()) return;
+  if (!mainWindow || mainWindow.isDestroyed()) return;
   const { width, height } = mainWindow.getContentBounds();
-  mainView.setBounds({
+  layoutTabs({
     x: 0,
     y: TITLEBAR_HEIGHT,
     width,
@@ -130,32 +131,29 @@ function createWindow(): void {
   mainWindow.loadFile(TITLEBAR_FILE);
   mainWindow.on("page-title-updated", (e) => e.preventDefault());
 
-  mainView = new WebContentsView({
-    webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-      contextIsolation: true,
-      nodeIntegration: false,
-      spellcheck: true,
+  // erpgence chay trong cac tab (src/tabs.ts) - moi tab mot WebContentsView ben duoi title bar.
+  attachToolbar(mainWindow);
+  initTabs(mainWindow, {
+    preload: path.join(__dirname, "preload.js"),
+    onSetup: (wc) => {
+      wireTab(wc);
+      // Link cung host mo cua so moi (target=_blank, window.open) -> mo thanh TAB moi ngay ben phai; host la -> trinh duyet.
+      wc.setWindowOpenHandler(({ url }) => {
+        if (isAllowed(url) && hostOf(url) === hostOf(APP_URL)) newTab(url);
+        else if (/^https?:/i.test(url)) shell.openExternal(url);
+        return { action: "deny" };
+      });
+      wc.on("will-navigate", (e, url) => {
+        if (!isAllowed(url)) {
+          e.preventDefault();
+          shell.openExternal(url);
+        }
+      });
     },
+    onChange: onTabsChanged,
   });
-  mainWindow.contentView.addChildView(mainView);
-  mainView.webContents.loadURL(APP_URL);
-  attachToolbar(mainWindow, mainView);
   watchWindow(mainWindow);
   layoutView();
-
-  // Link ngoai danh sach host -> mo browser he thong; cung host -> dieu huong trong app.
-  mainView.webContents.setWindowOpenHandler(({ url }) => {
-    if (isAllowed(url)) return { action: "allow" };
-    shell.openExternal(url);
-    return { action: "deny" };
-  });
-  mainView.webContents.on("will-navigate", (e, url) => {
-    if (!isAllowed(url)) {
-      e.preventDefault();
-      shell.openExternal(url);
-    }
-  });
 
   // Resize/maximize -> dinh vi lai webview + luu kich thuoc (debounce).
   let saveTimer: NodeJS.Timeout | null = null;
@@ -178,12 +176,13 @@ function createWindow(): void {
       mainWindow?.hide();
     } else {
       saveBounds();
+      saveTabsBeforeQuit();
     }
   });
 
   mainWindow.on("closed", () => {
     mainWindow = null;
-    mainView = null;
+    disposeTabs();
     detachToolbar();
   });
 }
@@ -203,6 +202,8 @@ function setAutoStart(enabled: boolean): void {
 
 // Lan cai/chay dau tien -> bat auto-start mac dinh. Sau do ton trong lua chon cua user (tray toggle).
 function ensureDefaultAutoStart(): void {
+  // Chay thu bang electron (npm run dev / user-data-dir rieng) khong duoc dang ky electron.exe vao khoi dong cung Windows.
+  if (!app.isPackaged) return;
   const marker = path.join(app.getPath("userData"), ".autostart-set");
   try {
     if (fs.existsSync(marker)) return;
@@ -258,7 +259,7 @@ function refreshTrayMenu(): void {
       click: () => {
         if (!mainWindow) createWindow();
         showWindow();
-        mainView?.webContents.openDevTools({ mode: "detach" });
+        activeTab()?.webContents.openDevTools({ mode: "detach" });
       },
     },
     {
@@ -331,9 +332,10 @@ ipcMain.on(
       return;
     }
 
-    // Bo qua neu vua hien notification cung id trong 10s (chong double tu 2 hook).
-    if (payload.id != null) {
-      const key = String(payload.id);
+    // Bo qua neu vua hien notification cung id trong 10s (chong double tu 2 hook, va tu NHIEU TAB cung chay erpgence -
+    // tu 1.1.1 moi tab deu nghe Reverb). Tin khong co id thi khoa theo tieu de + noi dung.
+    {
+      const key = payload.id != null ? String(payload.id) : "t:" + payload.title + "|" + (payload.body || "");
       const now = Date.now();
       const last = recentNotifyIds.get(key);
       if (last && now - last < NOTIFY_DEDUP_MS) return;
@@ -353,7 +355,7 @@ ipcMain.on(
       });
       n.on("click", () => {
         showWindow();
-        if (payload.url) mainView?.webContents.send("gence:open", payload.url);
+        if (payload.url) activeTab()?.webContents.send("gence:open", payload.url);
       });
       n.show();
     } catch (err) {
@@ -465,11 +467,12 @@ if (!gotLock) {
       beforeQuit: () => {
         isQuitting = true;
         saveBounds();
+        saveTabsBeforeQuit();
       },
       onPending: (version) => {
         refreshTrayMenu();
         refreshToolbar();
-        mainView?.webContents.send("gence:update-ready", version);
+        for (const v of allTabs()) if (!v.webContents.isDestroyed()) v.webContents.send("gence:update-ready", version);
       },
     });
 

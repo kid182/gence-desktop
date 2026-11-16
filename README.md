@@ -119,3 +119,13 @@ Màn hồ sơ Kinh doanh trên erpgence (nút "Ký số") gọi `window.genceDes
 - Chỉ trang `quanly.gence.vn` gọi được (`main.ts` kiểm `senderFrame`).
 - ⚠ Ảnh dấu + chữ ký giám đốc KHÔNG đóng gói vào app - web lấy từ servergence (có đăng nhập) rồi truyền `anhKhoiKy`.
 - ⚠ PDF đã có chữ ký thì ký lại làm hỏng chữ ký cũ (pdf-lib ghi lại cả file). PDF servergence đưa ra để ký chưa ký nên v1 chấp nhận.
+
+## Tab làm việc (từ 1.1.1, `src/tabs.ts`)
+- Thanh trên cùng cao 40 px (`TITLEBAR_HEIGHT`, khớp `--h` trong `ui/titlebar.html`), dải tab kiểu Chrome giữa nút điều hướng và tiện ích.
+- Mỗi tab là một `WebContentsView` chạy erpgence; tab không chọn ẩn nhưng trang vẫn chạy.
+- Nút "+" / Ctrl + T **nhân bản trang đang mở** sang tab mới ngay bên phải. Link `target=_blank` cùng host cũng mở thành tab.
+- Ctrl + W đóng, Ctrl + Tab / Ctrl + Shift + Tab chuyển, Ctrl + 1..9 nhảy tới, chuột giữa đóng, kéo thả đổi chỗ. Đóng tab cuối = về một tab trang chủ.
+- Tên tab = tên menu: erpgence đặt `document.title` = "<tên menu> - ERP Gence" (`components/layout/activity-tracker.tsx`), desktop cắt đuôi.
+- Danh sách tab lưu ở `userData/tabs.json` - mở lại app (kể cả tự cài cập nhật ngầm) thì mở lại đúng các tab.
+- Nhiều tab cùng nghe Reverb nên thông báo OS chống trùng theo id, tin không id thì theo tiêu đề + nội dung (`gence:notify` trong `main.ts`).
+- Chạy thử không đụng bản đã cài: `electron . --user-data-dir=<thư mục tạm>` (khoá một-phiên theo userData). Bản không đóng gói không tự đăng ký khởi động cùng Windows.

@@ -45,6 +45,84 @@ bar.on("bar:state", (s) => {
   if (panelOpen) $("dlDot").hidden = true;
 });
 
+/* ---------- Tab lam viec (src/tabs.ts) ---------- */
+// Main day danh sach qua bar:tabs: [{ id, title, loading, active }]. Ve lai ca dai moi lan - toi da 20 tab nen re.
+const tabsEl = $("tabs");
+let keoId = null;
+
+function veTabs(list) {
+  tabsEl.textContent = "";
+  const mot = list.length === 1;
+  list.forEach((t, i) => {
+    const el = document.createElement("div");
+    el.className = "tab" + (t.active ? " on" : "") + (mot ? " mot" : "");
+    el.setAttribute("role", "tab");
+    el.setAttribute("aria-selected", t.active ? "true" : "false");
+    el.title = t.title;
+    el.draggable = true;
+    el.dataset.id = t.id;
+    el.dataset.i = i;
+
+    const ic = document.createElement("span");
+    ic.className = "ic" + (t.loading ? " spin" : "");
+    const ten = document.createElement("span");
+    ten.className = "t";
+    ten.textContent = t.title;
+    const x = document.createElement("button");
+    x.className = "x";
+    x.title = "Đóng tab (Ctrl + W)";
+    x.setAttribute("aria-label", "Đóng tab " + t.title);
+    x.innerHTML = '<svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
+    x.onclick = (e) => {
+      e.stopPropagation();
+      bar.do("tab-close", t.id);
+    };
+    el.append(ic, ten, x);
+
+    el.onmousedown = (e) => {
+      if (e.button === 0) bar.do("tab-activate", t.id);
+    };
+    // Chuot giua = dong tab, nhu trinh duyet.
+    el.onauxclick = (e) => {
+      if (e.button === 1) bar.do("tab-close", t.id);
+    };
+    el.ondragstart = (e) => {
+      keoId = t.id;
+      el.classList.add("keo");
+      e.dataTransfer.effectAllowed = "move";
+    };
+    el.ondragend = () => {
+      keoId = null;
+      el.classList.remove("keo");
+      tabsEl.querySelectorAll(".dich").forEach((n) => n.classList.remove("dich"));
+    };
+    el.ondragover = (e) => {
+      if (keoId == null) return;
+      e.preventDefault();
+      tabsEl.querySelectorAll(".dich").forEach((n) => n.classList.remove("dich"));
+      el.classList.add("dich");
+    };
+    el.ondrop = (e) => {
+      e.preventDefault();
+      if (keoId == null || keoId === t.id) return;
+      bar.do("tab-move", { id: keoId, to: i });
+    };
+    tabsEl.append(el);
+  });
+  // Giu tab dang chon trong tam nhin khi dai tab tran.
+  tabsEl.querySelector(".tab.on")?.scrollIntoView({ block: "nearest", inline: "nearest" });
+}
+
+bar.on("bar:tabs", veTabs);
+$("newTab").onclick = () => bar.do("tab-new");
+// Lan chuot tren dai tab = cuon ngang.
+tabsEl.addEventListener("wheel", (e) => {
+  if (e.deltaY) {
+    tabsEl.scrollLeft += e.deltaY;
+    e.preventDefault();
+  }
+}, { passive: false });
+
 /* ---------- Tep tai xuong: vach tien do + cham bao tep moi ---------- */
 const seenDone = new Set();
 let firstList = true;
@@ -96,6 +174,13 @@ findInput.onkeydown = (e) => {
 };
 
 bar.on("bar:find-open", openFind);
+// Doi tab: luot tim cu thuoc tab truoc -> dong o tim (main da xoa to sang o tab cu).
+bar.on("bar:find-reset", () => {
+  if (find.hidden) return;
+  find.hidden = true;
+  $("findBtn").classList.remove("on");
+  findCount.textContent = "";
+});
 bar.on("bar:find", (r) => {
   const has = !!findInput.value;
   findCount.textContent = has ? `${r.active}/${r.total}` : "";
@@ -118,6 +203,7 @@ if (bar.platform === "darwin") {
   $("forward").title = "Tiến tới (⌘ ])";
   $("findBtn").title = "Tìm trong trang (⌘ F)";
   $("dl").title = "Tệp tải xuống (⌘ J)";
+  $("newTab").title = "Tab mới - nhân bản trang đang mở (⌘ T)";
 }
 
 bar.do("ready");
