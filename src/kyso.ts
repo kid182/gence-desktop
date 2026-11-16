@@ -99,6 +99,33 @@ function Ky([System.Security.Cryptography.X509Certificates.X509IncludeOption]$ke
   $cms.ComputeSignature($s, $false)
   return ,$cms.Encode()
 }
+# O nhap PIN cua driver token mo trong CHINH tien trinh nay. Electron chay PowerShell an cua so (windowsHide) nen Windows
+# mo o PIN o trang thai AN -> nguoi dung khong thay gi, nut "Dang ky so" quay mai (anh Phuc 16/11/2026, token NC-CA).
+# Luong nen: thay hop thoai (#32770) cua tien trinh dang an thi bat hien, dua len tren cung.
+Add-Type @"
+using System; using System.Text; using System.Threading; using System.Diagnostics; using System.Runtime.InteropServices;
+public static class HienOPin {
+  delegate bool EP(IntPtr h, IntPtr l);
+  [DllImport("user32.dll")] static extern bool EnumWindows(EP f, IntPtr l);
+  [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr h, out uint p);
+  [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
+  [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern int GetClassName(IntPtr h, StringBuilder s, int n);
+  [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr h, int c);
+  [DllImport("user32.dll")] static extern bool SetWindowPos(IntPtr h, IntPtr a, int x, int y, int cx, int cy, uint f);
+  [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr h);
+  public static void Bat() {
+    uint toi = (uint)Process.GetCurrentProcess().Id;
+    var t = new Thread(() => { while (true) {
+      EnumWindows((h, l) => { uint p; GetWindowThreadProcessId(h, out p);
+        if (p == toi && !IsWindowVisible(h)) { var c = new StringBuilder(64); GetClassName(h, c, 64);
+          if (c.ToString() == "#32770") { ShowWindow(h, 5); SetWindowPos(h, new IntPtr(-1), 0, 0, 0, 0, 0x0043); SetForegroundWindow(h); } }
+        return true; }, IntPtr.Zero);
+      Thread.Sleep(200); } });
+    t.IsBackground = true; t.Start();
+  }
+}
+"@
+[HienOPin]::Bat()
 try {
   $p = 'Cert:\CurrentUser\My\' + $env:GENCE_KYSO_TP
   if (-not (Test-Path $p)) { throw 'KHONG_THAY' }

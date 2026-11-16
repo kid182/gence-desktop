@@ -118,6 +118,7 @@ Màn hồ sơ Kinh doanh trên erpgence (nút "Ký số") gọi `window.genceDes
   chừa chỗ ký, nên sửa khung là hỏng chữ ký.
 - Chỉ trang `quanly.gence.vn` gọi được (`main.ts` kiểm `senderFrame`).
 - ⚠ Ảnh dấu + chữ ký giám đốc KHÔNG đóng gói vào app - web lấy từ servergence (có đăng nhập) rồi truyền `anhKhoiKy`.
+- ⚠ Ô PIN của driver token mở TRONG tiến trình PowerShell đang ẩn cửa sổ (windowsHide) nên Windows mở nó ở trạng thái ẨN - 1.1.0-1.1.2 nút "Đang ký số" quay mãi. Từ 1.1.3 script có luồng nền bật hiện hộp thoại (#32770) của chính nó lên trên cùng. Thử token NC-CA thật 16/11: ký 69 giây gồm nhập PIN, KySoPdfService đọc đúng MST 0107920923, toàn vẹn, phủ hết file.
 - ⚠ PDF đã có chữ ký thì ký lại làm hỏng chữ ký cũ (pdf-lib ghi lại cả file). PDF servergence đưa ra để ký chưa ký nên v1 chấp nhận.
 
 ## Tab làm việc (từ 1.1.1, `src/tabs.ts`)
