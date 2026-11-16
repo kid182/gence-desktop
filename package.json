@@ -1,6 +1,6 @@
 {
   "name": "gence-desktop",
-  "version": "1.0.9",
+  "version": "1.1.0",
   "description": "Hệ thống quản lý Gence",
   "author": {
     "name": "Gence",
@@ -19,7 +19,11 @@
     "publish": "npm run build && electron-builder --publish always"
   },
   "dependencies": {
-    "electron-updater": "^6.3.9"
+    "@signpdf/placeholder-pdf-lib": "^4.0.0",
+    "@signpdf/signpdf": "^4.0.0",
+    "@signpdf/utils": "^4.0.0",
+    "electron-updater": "^6.3.9",
+    "pdf-lib": "^1.17.1"
   },
   "devDependencies": {
     "@types/node": "^22.9.0",

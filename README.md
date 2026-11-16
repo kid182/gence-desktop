@@ -103,3 +103,19 @@ cd C:\Users\Admin\Gence Projects\tools\gence-desktop
 npm version patch          # 1.0.0 -> 1.0.1, tự commit + tạo tag v1.0.1
 git push
 git push --tags            # <-- kích hoạt CI
+
+## Ký số PDF bằng USB token (từ 1.1.0, `src/kyso.ts`)
+Màn hồ sơ Kinh doanh trên erpgence (nút "Ký số") gọi `window.genceDesktop.kySo`:
+
+- `chungThu()` - chứng thư trong kho Windows `CurrentUser\My`: có khoá riêng, còn hạn, có `MST:` trong tên. Driver USB token
+  tự đẩy chứng thư vào kho khi cắm, nên không phụ thuộc hãng token. Mảng rỗng = chưa cắm token.
+- `kyPdf(pdf, { thumbprint, lyDo, diaDiem, anhKhoiKy?, viTri? })` - ký `adbe.pkcs7.detached` (CMS SHA-256, cùng chuẩn Foxit).
+  Phần CMS gọi .NET `SignedCms` qua PowerShell, `silent = false` nên driver token tự hiện ô PIN; app không thấy PIN.
+  Lỗi ném `Error` kèm câu tiếng Việt (web hiện thẳng trong toast).
+- Khung chữ ký (anh Phúc chốt 16/11/2026): rộng 7 cm, nền xanh nhạt, "Chữ ký hợp lệ (Signature Valid)" / ảnh dấu + chữ ký
+  (CTY) / "Ký bởi (Signed By)" / "Ký ngày (Signing Date)". HKD không ảnh: dấu tích lớn mờ dưới chữ. Vẽ bằng HTML trong cửa
+  sổ ẩn rồi chụp PNG (Times New Roman của Windows) - không nhúng font vào PDF. Khung được vẽ VÀO nội dung trang trước khi
+  chừa chỗ ký, nên sửa khung là hỏng chữ ký.
+- Chỉ trang `quanly.gence.vn` gọi được (`main.ts` kiểm `senderFrame`).
+- ⚠ Ảnh dấu + chữ ký giám đốc KHÔNG đóng gói vào app - web lấy từ servergence (có đăng nhập) rồi truyền `anhKhoiKy`.
+- ⚠ PDF đã có chữ ký thì ký lại làm hỏng chữ ký cũ (pdf-lib ghi lại cả file). PDF servergence đưa ra để ký chưa ký nên v1 chấp nhận.

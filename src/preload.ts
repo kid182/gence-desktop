@@ -30,7 +30,33 @@ export interface GenceDesktopBridge {
   installUpdate: () => void;
   /** Dang ky callback khi mot ban moi vua tai xong, san sang cai. */
   onUpdateReady: (cb: (version: string) => void) => () => void;
+
+  // --- Ky so PDF bang USB token (co tu 1.1.0; ban cu khong co `kySo`) ---
+  kySo: {
+    /** Chung thu phap nhan ky duoc tren may (kho Windows, co khoa rieng, con han, co MST). Rong = chua cam token. */
+    chungThu: () => Promise<Array<{ thumbprint: string; ten: string; mst: string; cap_boi: string; het_han: string }>>;
+    /**
+     * Ky PDF (adbe.pkcs7.detached, SHA-256). Driver token tu hien o PIN. Loi nem Error kem cau tieng Viet
+     * ("Da huy nhap PIN, chua ky.", "Khong thay chung thu da chon - USB token da cam chua...").
+     */
+    kyPdf: (
+      pdf: Uint8Array,
+      tuyChon: {
+        thumbprint: string;
+        lyDo?: string;
+        diaDiem?: string;
+        anhKhoiKy?: Uint8Array;
+        viTri?: { trang?: number; x: number; y: number; rong: number; cao: number };
+      },
+    ) => Promise<Uint8Array>;
+  };
 }
+
+type KetQua<T> = { ok: true; data: T } | { ok: false; loi: string };
+const moGoi = <T>(r: KetQua<T>): T => {
+  if (r.ok) return r.data;
+  throw new Error(r.loi);
+};
 
 const bridge: GenceDesktopBridge = {
   isDesktop: true,
@@ -52,6 +78,10 @@ const bridge: GenceDesktopBridge = {
     const listener = (_e: unknown, version: string) => cb(version);
     ipcRenderer.on("gence:update-ready", listener);
     return () => ipcRenderer.removeListener("gence:update-ready", listener);
+  },
+  kySo: {
+    chungThu: async () => moGoi(await ipcRenderer.invoke("gence:kyso-chung-thu")),
+    kyPdf: async (pdf, tuyChon) => moGoi(await ipcRenderer.invoke("gence:kyso-ky-pdf", pdf, tuyChon)),
   },
 };
 

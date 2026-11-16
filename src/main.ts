@@ -40,6 +40,7 @@ import {
   updateState,
   consumeRelaunchHidden,
 } from "./updater";
+import { chungThu, kyPdf, type TuyChonKy } from "./kyso";
 
 let mainWindow: BrowserWindow | null = null;
 let mainView: WebContentsView | null = null; // webview erpgence (nam duoi title bar)
@@ -410,6 +411,29 @@ ipcMain.handle("gence:update-check", async () => {
   return updateState();
 });
 ipcMain.on("gence:update-install", () => installUpdate(true));
+
+/* ----------------------------- Ky so PDF bang USB token (kyso.ts) ----------------------------- */
+// Chi trang ERP (quanly.gence.vn) duoc goi: ky bang token phap nhan la viec nhay cam, cua so dieu huong lac sang trang khac
+// (dang nhap Google...) khong duoc cham toi. Tra { ok, data | loi } de preload nem lai Error co cau tieng Viet sach.
+const laTrangErp = (e: Electron.IpcMainInvokeEvent) => hostOf(e.senderFrame?.url ?? "") === new URL(APP_URL).host;
+
+ipcMain.handle("gence:kyso-chung-thu", async (e) => {
+  if (!laTrangErp(e)) return { ok: false, loi: "Chỉ trang ERP Gence được dùng ký số." };
+  try {
+    return { ok: true, data: await chungThu() };
+  } catch (err) {
+    return { ok: false, loi: "Không đọc được chứng thư số: " + (err instanceof Error ? err.message : String(err)) };
+  }
+});
+
+ipcMain.handle("gence:kyso-ky-pdf", async (e, pdf: Uint8Array, tuyChon: TuyChonKy) => {
+  if (!laTrangErp(e)) return { ok: false, loi: "Chỉ trang ERP Gence được dùng ký số." };
+  try {
+    return { ok: true, data: await kyPdf(pdf, tuyChon) };
+  } catch (err) {
+    return { ok: false, loi: err instanceof Error ? err.message : String(err) };
+  }
+});
 
 ipcMain.on("gence:badge", (_e, count: number) => {
   const c = Math.max(0, Number(count) || 0);
