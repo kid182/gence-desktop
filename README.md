@@ -112,10 +112,8 @@ Màn hồ sơ Kinh doanh trên erpgence (nút "Ký số") gọi `window.genceDes
 - `kyPdf(pdf, { thumbprint, lyDo, diaDiem, anhKhoiKy?, viTri? })` - ký `adbe.pkcs7.detached` (CMS SHA-256, cùng chuẩn Foxit).
   Phần CMS gọi .NET `SignedCms` qua PowerShell, `silent = false` nên driver token tự hiện ô PIN; app không thấy PIN.
   Lỗi ném `Error` kèm câu tiếng Việt (web hiện thẳng trong toast).
-- Khung chữ ký (anh Phúc chốt 16/11/2026): rộng 7 cm, nền xanh nhạt, "Chữ ký hợp lệ (Signature Valid)" / ảnh dấu + chữ ký
-  (CTY) / "Ký bởi (Signed By)" / "Ký ngày (Signing Date)". HKD không ảnh: dấu tích lớn mờ dưới chữ. Vẽ bằng HTML trong cửa
-  sổ ẩn rồi chụp PNG (Times New Roman của Windows) - không nhúng font vào PDF. Khung được vẽ VÀO nội dung trang trước khi
-  chừa chỗ ký, nên sửa khung là hỏng chữ ký.
+- Khung chữ ký (anh Phúc chốt 16/11/2026, từ 1.1.4): CHỈ CHỮ, không ảnh dấu, cho cả Công ty lẫn HKD - rộng 7 cm, nền xanh nhạt, dấu tích lớn mờ; "Chữ ký hợp lệ (Signature Valid)" / Ký bởi / Cấp bởi (CA) / Số serial (riêng một dòng) / Ký ngày, lấy thẳng từ chứng thư. Vẽ bằng HTML trong cửa sổ ẩn ở 8 px/pt (~576 dpi) rồi chụp PNG. Khung được vẽ VÀO nội dung trang trước khi chừa chỗ ký, nên sửa khung là hỏng chữ ký.
+- Vị trí (1.1.4): `timOKy` dùng pdf.js (`pdfjs-dist` 4.10, nạp ESM qua `new Function("return import()")` vì main biên dịch CommonJS) tìm dòng "ĐẠI DIỆN BÊN B" / "ĐƠN VỊ BÁN HÀNG" từ trang cuối ngược lên, đặt khung ngay dưới dòng chú thích bên dưới, căn giữa cột. Không thấy thì góc dưới phải trang cuối. Đã thử trên bản đóng gói (win-unpacked) qua CDP.
 - Chỉ trang `quanly.gence.vn` gọi được (`main.ts` kiểm `senderFrame`).
 - ⚠ Ảnh dấu + chữ ký giám đốc KHÔNG đóng gói vào app - web lấy từ servergence (có đăng nhập) rồi truyền `anhKhoiKy`.
 - ⚠ Ô PIN của driver token mở TRONG tiến trình PowerShell đang ẩn cửa sổ (windowsHide) nên Windows mở nó ở trạng thái ẨN - 1.1.0-1.1.2 nút "Đang ký số" quay mãi. Từ 1.1.3 script có luồng nền bật hiện hộp thoại (#32770) của chính nó lên trên cùng. Thử token NC-CA thật 16/11: ký 69 giây gồm nhập PIN, KySoPdfService đọc đúng MST 0107920923, toàn vẹn, phủ hết file.

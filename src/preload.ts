@@ -34,7 +34,7 @@ export interface GenceDesktopBridge {
   // --- Ky so PDF bang USB token (co tu 1.1.0; ban cu khong co `kySo`) ---
   kySo: {
     /** Chung thu phap nhan ky duoc tren may (kho Windows, co khoa rieng, con han, co MST). Rong = chua cam token. */
-    chungThu: () => Promise<Array<{ thumbprint: string; ten: string; mst: string; cap_boi: string; het_han: string }>>;
+    chungThu: () => Promise<Array<{ thumbprint: string; ten: string; mst: string; cap_boi: string; serial: string; het_han: string }>>;
     /**
      * Ky PDF (adbe.pkcs7.detached, SHA-256). Driver token tu hien o PIN. Loi nem Error kem cau tieng Viet
      * ("Da huy nhap PIN, chua ky.", "Khong thay chung thu da chon - USB token da cam chua...").
