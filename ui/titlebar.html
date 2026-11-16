@@ -27,14 +27,16 @@
   .grow { flex: 1 1 auto; min-width: 12px; }
 
   /* ---------- Dai tab kieu Chrome (tu 1.1.1) ---------- */
+  /* Kieu Chrome: cac tab rong bang nhau toi da 240px, het cho thi CUNG co lai; nut + nam ngay sau tab cuoi; khoang trong
+     con lai trong dai van keo duoc cua so. Rat nhieu tab (duoi 40px moi tab) thi cuon ngang. */
   .tabs {
-    flex: 0 1 auto; min-width: 0; height: 100%; margin-left: 8px;
+    flex: 1 1 auto; min-width: 0; height: 100%; margin-left: 8px;
     display: flex; align-items: center; gap: 2px; overflow-x: auto; overflow-y: hidden;
     scrollbar-width: none; -webkit-app-region: drag;
   }
   .tabs::-webkit-scrollbar { display: none; }
   .tab {
-    -webkit-app-region: no-drag; position: relative; flex: 0 1 210px; min-width: 76px; height: 30px;
+    -webkit-app-region: no-drag; position: relative; flex: 0 1 240px; min-width: 40px; height: 30px;
     box-sizing: border-box; padding: 0 4px 0 10px; border-radius: 8px;
     display: flex; align-items: center; gap: 7px;
     color: rgba(255, 255, 255, .72); font-size: 12.5px; cursor: default;
@@ -58,9 +60,16 @@
   .tab .x:hover { opacity: 1; background: rgba(255, 255, 255, .18); }
   .tab .x svg { width: 12px; height: 12px; stroke-width: 2.4; }
   .tab.mot .x { display: none; }
+  /* Tab hep (titlebar.js do be rong): tab khong chon bo dau x; rat hep thi bo chu, chi con cham - tab dang chon giu dau x. */
+  .tabs.hep .tab:not(.on) .x { display: none; }
+  .tabs.hep .tab { padding: 0 2px 0 8px; gap: 5px; }
+  .tabs.rathep .tab { padding: 0; justify-content: center; }
+  .tabs.rathep .tab .t { display: none; }
+  .tabs.rathep .tab.on:not(.mot) .ic { display: none; }
   .tab.keo { opacity: .5; }
   .tab.dich { box-shadow: inset 2px 0 0 var(--ac); }
-  #newTab { margin-left: 2px; border-radius: 50%; width: 30px; height: 30px; }
+  #newTab { flex: 0 0 auto; margin-left: 2px; border-radius: 50%; width: 30px; height: 30px; }
+  .grow.keo-cua-so { flex: 0 0 28px; }
 
   button {
     -webkit-app-region: no-drag; position: relative; flex: 0 0 auto;
@@ -133,12 +142,13 @@
     <svg viewBox="0 0 24 24"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
   </button>
 
-  <div class="tabs" id="tabs" role="tablist" aria-label="Tab làm việc"></div>
-  <button id="newTab" title="Tab mới - nhân bản trang đang mở (Ctrl + T)" aria-label="Tab mới">
-    <svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
-  </button>
+  <div class="tabs" id="tabs" role="tablist" aria-label="Tab làm việc">
+    <button id="newTab" title="Tab mới - nhân bản trang đang mở (Ctrl + T)" aria-label="Tab mới">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+    </button>
+  </div>
 
-  <div class="grow"></div>
+  <div class="grow keo-cua-so"></div>
 
   <div class="find" id="find" hidden>
     <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>

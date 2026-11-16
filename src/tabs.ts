@@ -142,6 +142,13 @@ export function newTab(url: string, opts: { activate?: boolean; afterId?: number
   wc.on("destroyed", () => {
     if (!dangDong && tabs.includes(tab)) dongTab(tab.id, false);
   });
+  // Trang sap (het bo nho, loi renderer) -> tai lai sau 1 giay, giu nguyen tab thay vi de trang trang hay mat tab.
+  wc.on("render-process-gone", (_e, d) => {
+    if (dangDong || d.reason === "clean-exit") return;
+    setTimeout(() => {
+      if (!dangDong && !wc.isDestroyed()) wc.reload();
+    }, 1000);
+  });
   cfg.onSetup(wc);
 
   view.setVisible(false);

@@ -168,6 +168,11 @@ function createWindow(): void {
   mainWindow.on("maximize", layoutView);
   mainWindow.on("unmaximize", layoutView);
   mainWindow.on("move", scheduleSave);
+  // Windows tat may / dang xuat: co the khong qua before-quit -> ghi danh sach tab truoc.
+  mainWindow.on("session-end", () => {
+    saveBounds();
+    saveTabsBeforeQuit();
+  });
 
   // Dong cua so = thu nho xuong tray (khong thoat) tru khi thuc su quit.
   mainWindow.on("close", (e) => {
@@ -484,6 +489,7 @@ if (!gotLock) {
 
   app.on("before-quit", () => {
     isQuitting = true;
+    saveTabsBeforeQuit();
   });
 
   // Khong tu thoat khi dong cua so (chay ngam o tray).

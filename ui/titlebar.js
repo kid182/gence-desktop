@@ -46,72 +46,108 @@ bar.on("bar:state", (s) => {
 });
 
 /* ---------- Tab lam viec (src/tabs.ts) ---------- */
-// Main day danh sach qua bar:tabs: [{ id, title, loading, active }]. Ve lai ca dai moi lan - toi da 20 tab nen re.
+// Main day danh sach qua bar:tabs: [{ id, title, loading, active }].
+// ⚠ Cap nhat TAI CHO theo id, khong ve lai ca dai: ban 1.1.1 ve lai moi lan -> nhan chuot vao dau x lan len tab, tab duoc
+//   chon lai, dai ve lai, nut x bi thay giua luc nhan va nha -> khong dong duoc tab (anh Phuc 16/11). Keo tha cung dut vi the.
 const tabsEl = $("tabs");
+const theTab = new Map(); // id -> phan tu
+let dsTab = [];
 let keoId = null;
 
+function taoTab(id) {
+  const el = document.createElement("div");
+  el.className = "tab";
+  el.setAttribute("role", "tab");
+  el.draggable = true;
+  el.dataset.id = id;
+  const ic = document.createElement("span");
+  ic.className = "ic";
+  const ten = document.createElement("span");
+  ten.className = "t";
+  const x = document.createElement("button");
+  x.className = "x";
+  x.title = "Đóng tab (Ctrl + W)";
+  x.draggable = false;
+  x.innerHTML = '<svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
+  // Nhan chuot o dau x KHONG duoc lan len tab (se chon tab va lam lech luot bam).
+  x.onmousedown = (e) => e.stopPropagation();
+  x.onclick = (e) => {
+    e.stopPropagation();
+    bar.do("tab-close", id);
+  };
+  el.append(ic, ten, x);
+
+  el.onmousedown = (e) => {
+    if (e.button === 0 && !el.classList.contains("on")) bar.do("tab-activate", id);
+  };
+  // Chuot giua = dong tab, nhu trinh duyet.
+  el.onauxclick = (e) => {
+    if (e.button === 1) bar.do("tab-close", id);
+  };
+  el.ondragstart = (e) => {
+    keoId = id;
+    el.classList.add("keo");
+    e.dataTransfer.effectAllowed = "move";
+  };
+  el.ondragend = () => {
+    keoId = null;
+    el.classList.remove("keo");
+    tabsEl.querySelectorAll(".dich").forEach((n) => n.classList.remove("dich"));
+  };
+  el.ondragover = (e) => {
+    if (keoId == null) return;
+    e.preventDefault();
+    tabsEl.querySelectorAll(".dich").forEach((n) => n.classList.remove("dich"));
+    el.classList.add("dich");
+  };
+  el.ondrop = (e) => {
+    e.preventDefault();
+    if (keoId == null || keoId === id) return;
+    bar.do("tab-move", { id: keoId, to: dsTab.findIndex((t) => t.id === id) });
+  };
+  return el;
+}
+
 function veTabs(list) {
-  tabsEl.textContent = "";
+  dsTab = list;
   const mot = list.length === 1;
+  const conLai = new Set(list.map((t) => t.id));
+  for (const [id, el] of theTab) {
+    if (!conLai.has(id)) {
+      el.remove();
+      theTab.delete(id);
+    }
+  }
   list.forEach((t, i) => {
-    const el = document.createElement("div");
-    el.className = "tab" + (t.active ? " on" : "") + (mot ? " mot" : "");
-    el.setAttribute("role", "tab");
+    let el = theTab.get(t.id);
+    if (!el) {
+      el = taoTab(t.id);
+      theTab.set(t.id, el);
+    }
+    el.classList.toggle("on", t.active);
+    el.classList.toggle("mot", mot);
     el.setAttribute("aria-selected", t.active ? "true" : "false");
     el.title = t.title;
-    el.draggable = true;
-    el.dataset.id = t.id;
-    el.dataset.i = i;
-
-    const ic = document.createElement("span");
-    ic.className = "ic" + (t.loading ? " spin" : "");
-    const ten = document.createElement("span");
-    ten.className = "t";
-    ten.textContent = t.title;
-    const x = document.createElement("button");
-    x.className = "x";
-    x.title = "Đóng tab (Ctrl + W)";
-    x.setAttribute("aria-label", "Đóng tab " + t.title);
-    x.innerHTML = '<svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
-    x.onclick = (e) => {
-      e.stopPropagation();
-      bar.do("tab-close", t.id);
-    };
-    el.append(ic, ten, x);
-
-    el.onmousedown = (e) => {
-      if (e.button === 0) bar.do("tab-activate", t.id);
-    };
-    // Chuot giua = dong tab, nhu trinh duyet.
-    el.onauxclick = (e) => {
-      if (e.button === 1) bar.do("tab-close", t.id);
-    };
-    el.ondragstart = (e) => {
-      keoId = t.id;
-      el.classList.add("keo");
-      e.dataTransfer.effectAllowed = "move";
-    };
-    el.ondragend = () => {
-      keoId = null;
-      el.classList.remove("keo");
-      tabsEl.querySelectorAll(".dich").forEach((n) => n.classList.remove("dich"));
-    };
-    el.ondragover = (e) => {
-      if (keoId == null) return;
-      e.preventDefault();
-      tabsEl.querySelectorAll(".dich").forEach((n) => n.classList.remove("dich"));
-      el.classList.add("dich");
-    };
-    el.ondrop = (e) => {
-      e.preventDefault();
-      if (keoId == null || keoId === t.id) return;
-      bar.do("tab-move", { id: keoId, to: i });
-    };
-    tabsEl.append(el);
+    el.querySelector(".ic").classList.toggle("spin", !!t.loading);
+    const ten = el.querySelector(".t");
+    if (ten.textContent !== t.title) ten.textContent = t.title;
+    el.querySelector(".x").setAttribute("aria-label", "Đóng tab " + t.title);
+    // Dat dung thu tu (chi di chuyen phan tu khi lech, khong tao lai).
+    if (tabsEl.children[i] !== el) tabsEl.insertBefore(el, tabsEl.children[i] ?? null);
   });
+  doBeRong();
   // Giu tab dang chon trong tam nhin khi dai tab tran.
   tabsEl.querySelector(".tab.on")?.scrollIntoView({ block: "nearest", inline: "nearest" });
 }
+
+/** Be rong that cua mot tab (cac tab bang nhau) -> bat lop hep / rathep cho dai tab, nhu Chrome bot dau x va chu khi chat. */
+function doBeRong() {
+  const mau = tabsEl.querySelector(".tab");
+  const w = mau ? mau.getBoundingClientRect().width : 999;
+  tabsEl.classList.toggle("hep", w < 96);
+  tabsEl.classList.toggle("rathep", w < 56);
+}
+new ResizeObserver(doBeRong).observe(tabsEl);
 
 bar.on("bar:tabs", veTabs);
 $("newTab").onclick = () => bar.do("tab-new");
